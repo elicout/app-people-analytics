@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRightIcon } from "@heroicons/react/24/solid";
 
 interface Props {
   title: string;
@@ -19,12 +19,12 @@ export default function CollapsibleSection({ title, id, defaultOpen = true, chil
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 px-8 pt-4 pb-4 mb-2 group"
       >
-        <ChevronRight
-          className={`h-4 w-4 text-slate-400 transition-transform duration-300 ease-in-out group-hover:text-slate-600 ${
+        <ChevronRightIcon
+          className={`h-4 w-4 text-gray-700 transition-transform duration-300 ease-in-out group-hover:text-gray-900 ${
             open ? "rotate-90" : "rotate-0"
           }`}
         />
-        <h2 className="text-lg font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">
+        <h2 className="text-lg font-regular text-gray-800 group-hover:text-gray-950 transition-colors">
           {title}
         </h2>
       </button>

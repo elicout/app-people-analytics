@@ -1,11 +1,14 @@
 import { auth } from "@/lib/auth";
 import { query } from "@/lib/db/client";
-import { KpiSummary, AlertLevel, TrendDirection } from "@/types";
+import { KpiSummary, KpiChartItem, SplitCardData, AlertLevel, TrendDirection } from "@/types";
 import { getAlertLevel, trendDir } from "@/lib/utils";
 import KpiGrid from "@/components/dashboard/KpiGrid";
 import CardGrid from "@/components/dashboard/CardGrid";
+import CardRow from "@/components/dashboard/CardRow";
 import KpiCard from "@/components/dashboard/KpiCard";
 import DistributionBar from "@/components/dashboard/DistributionBar";
+import SplitCard from "@/components/dashboard/SplitCard";
+import KpiChartCard from "@/components/dashboard/KpiChartCard";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
 
 // ─── DB row types ─────────────────────────────────────────────────────────────
@@ -33,28 +36,6 @@ function kpi(
 
 // ─── sub-components ───────────────────────────────────────────────────────────
 
-function SplitCard({ title, items }: {
-  title: string;
-  items: Array<{ label: string; value: string; sub?: string }>;
-  span?: number | "fill";
-}) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="mb-4 text-sm font-medium text-slate-500">{title}</p>
-      <div className="flex gap-6">
-        {items.map(({ label, value, sub }) => (
-          <div key={label}>
-            <p className="text-xs text-slate-400 mb-0.5">{label}</p>
-            <p className="text-3xl font-bold text-slate-900 leading-tight">
-              {value}
-              {sub && <span className="ml-1 text-base font-normal text-slate-400">{sub}</span>}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 
 function MotivosCard({ items }: { items: Array<[string, number]>; span?: number | "fill" }) {
@@ -98,6 +79,7 @@ export default async function DashboardPage() {
     highPerfRow,
     turnoverCountRow,
     monthlyTurnover,
+    monthlyHC,
   ] = await Promise.all([
     query<N>("SELECT CAST(COUNT(*) AS INTEGER) as value FROM employees WHERE team_id=? AND status!='terminated'", [tid]),
     query<N>("SELECT ROUND(SUM(salary_usd), 0) as value FROM employees WHERE team_id=? AND status!='terminated'", [tid]),
@@ -167,6 +149,15 @@ export default async function DashboardPage() {
        FROM turnover WHERE team_id=? GROUP BY 1 ORDER BY 1`,
       [tid]
     ),
+    query<MonthCount>(
+      `SELECT month, CAST(SUM(count) OVER (ORDER BY month) AS INTEGER) as count FROM (
+         SELECT CAST(DATE_TRUNC('month', hire_date) AS VARCHAR) as month,
+                CAST(COUNT(*) AS INTEGER) as count
+         FROM employees WHERE team_id=?
+         GROUP BY DATE_TRUNC('month', hire_date)
+       ) ORDER BY month`,
+      [tid]
+    ),
   ]);
 
   // ── derived values ───────────────────────────────────────────────────────────
@@ -216,16 +207,48 @@ export default async function DashboardPage() {
 
   // ── KPI definitions ──────────────────────────────────────────────────────────
 
-  const workforceKpis: KpiSummary[] = [
-    kpi("headcount", "Headcount", hc, hc.toLocaleString("pt-BR"), "", lastHires - prevHires, trendDir(lastHires, prevHires), "green", true),
-    kpi("admissoes", "Admissões (últ. mês)", lastHires, String(lastHires), "", lastHires - prevHires, trendDir(lastHires, prevHires), "green", true),
-    kpi("posicoes", "Posições Abertas", posOpen, String(posOpen), "", 3, "up", getAlertLevel(posOpen, 5, false), false, 3),
-    kpi("custo", "Custo Total", salary, `R$ ${(salary / 1_000).toFixed(0)}K`, "", 24, "up", "green", true),
-    kpi("atividade", "Atividade Digital", activity, `${activity.toFixed(1)}%`, "%", 1.2, "up", getAlertLevel(activity, 85, true), true, 85),
-    kpi("presenca", "Presença no Escritório", presence, `${presence.toFixed(1)}%`, "%", -0.5, "down", getAlertLevel(presence, 70, true), true, 70),
-    kpi("banco-horas", "Banco de Horas", bhComp, `${bhComp}%`, "%", -5, "down", getAlertLevel(bhComp, 80, true), true, 80, `${bhPending}h à compensar`),
-    kpi("horas-extras", "Horas Extras", otHours, `${otHours}h`, "", -12, "down", getAlertLevel(otHours, 100, false), false),
+  const workforceChartKpis: KpiChartItem[] = [
+    {
+      id: "headcount",
+      label: "Headcount",
+      formattedValue: hc.toLocaleString("pt-BR"),
+      //alert: "green",
+      chart: { data: monthlyHC.map((r) => ({ month: r.month, value: r.count })) },
+    },
+    {
+      id: "admissoes",
+      label: "Admissões",
+      formattedValue: String(lastHires),
+      //alert: "green",
+      chart: { data: monthlyHires.map((r) => ({ month: r.month, value: r.count })) },
+    },
+    {
+      id: "posicoes",
+      label: "Posições Abertas",
+      formattedValue: String(posOpen),
+      //alert: getAlertLevel(posOpen, 5, false),
+    },
+    {
+      id: "custo",
+      label: "Custo Total",
+      formattedValue: `R$ ${(salary / 1_000).toFixed(0)}K`,
+      //alert: "green",
+    },
   ];
+
+  const workforceKpis: KpiSummary[] = [
+    kpi("atividade", "Atividade Digital", activity, `${activity.toFixed(1)}%`, "%", 1.2, "up", getAlertLevel(activity, 90, true), true, 80),
+    kpi("presenca", "Presença no Escritório", presence, `${presence.toFixed(1)}%`, "%", -0.5, "down", getAlertLevel(presence, 60, true), true, 60),
+  ];
+
+  const jornadaCard: SplitCardData = {
+    title: "Jornada",
+    items: [
+      { label: "Saldo Compensado", subtitle: "BH", value: `${bhComp}%`, sub: "compensado", showLabel: false, alert: getAlertLevel(bhComp, 80, true) },
+      { label: "Horas a Compensar", value: `${bhPending}h`, sub: "à compensar", showLabel: false },
+      { label: "Horas Extras Realizadas", subtitle: "HE", value: `${otHours}h`, sub: "realizadas", showLabel: false, alert: getAlertLevel(otHours, 100, false) },
+    ],
+  };
 
   const diversidadeKpis: KpiSummary[] = [
     kpi("pcds", "PCDs", pcdCount, `${pcdCount} (${Math.round((pcdCount / hc) * 100)}%)`, "", -1, "down", "green", true),
@@ -254,58 +277,77 @@ export default async function DashboardPage() {
 
       {/* ══════════ WORKFORCE PLANNING ══════════ */}
       <CollapsibleSection title="Workforce Planning" id="workforce">
-        <div className="space-y-5">
-          <KpiGrid kpis={workforceKpis} />
+        <div className="grid grid-cols-4 gap-5">
+          {/* KpiChartCard — left side, spans 2 cols × 2 rows */}
+          <div style={{ gridColumn: "span 2", gridRow: "span 2" }} className="grid">
+            <KpiChartCard kpis={workforceChartKpis} chartHeight={200} />
+          </div>
+          {/* Right side row 1: Atividade + Presença */}
+          {workforceKpis.map((k) => (
+            <div key={k.id} className="grid"><KpiCard kpi={k} /></div>
+          ))}
+          {/* Right side row 2: Jornada SplitCard */}
+          <div style={{ gridColumn: "span 2" }} className="grid">
+            <SplitCard card={jornadaCard} />
+          </div>
         </div>
       </CollapsibleSection>
 
       {/* ══════════ DIVERSIDADE ══════════ */}
       <CollapsibleSection title="Diversidade" id="diversidade">
-        {/* 5 KpiCards → row1: 4, row2: 1 — DistributionBar fills the remaining 3 */}
         <CardGrid>
-          {diversidadeKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
-          <DistributionBar
-            title="Distribuição de Cargos"
-            items={roleRows.map((r) => ({ label: r.role, count: r.count }))}
-            total={hc}
-            span="fill"
-          />
+          <CardRow>
+            {diversidadeKpis.slice(0, 4).map((k) => <KpiCard key={k.id} kpi={k} />)}
+          </CardRow>
+          <CardRow>
+            {diversidadeKpis.slice(4).map((k) => <KpiCard key={k.id} kpi={k} />)}
+            <DistributionBar
+              title="Distribuição de Cargos"
+              items={roleRows.map((r) => ({ label: r.role, count: r.count }))}
+              total={hc}
+              span={3}
+            />
+          </CardRow>
         </CardGrid>
       </CollapsibleSection>
 
       {/* ══════════ PERFORMANCE E TALENTOS ══════════ */}
       <CollapsibleSection title="Performance e Talentos" id="performance">
-        {/* 4 KpiCards fill row1 — GD and GT each take 2 cols in row2 */}
         <CardGrid>
-          {performanceKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
-          <DistributionBar title="Gestão de Desempenho (GD)" items={GD} total={gdTotal} span={2} />
-          <DistributionBar title="Gestão de Talentos (GT)" items={GT} total={gdTotal} span={2} />
+          <CardRow>
+            {performanceKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
+          </CardRow>
+          <CardRow>
+            <DistributionBar title="Gestão de Desempenho (GD)" items={GD} total={gdTotal} />
+            <DistributionBar title="Gestão de Talentos (GT)" items={GT} total={gdTotal} />
+          </CardRow>
         </CardGrid>
       </CollapsibleSection>
 
       {/* ══════════ TURNOVER ══════════ */}
       <CollapsibleSection title="Turnover" id="turnover">
-        {/* 4 KpiCards fill row1 — SplitCard + MotivosCard each take 2 cols in row2 */}
         <CardGrid>
-          {turnoverKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
-          <SplitCard
-            span={2}
-            title="Desligamentos por Cargo"
-            items={[
-              { label: "Líderes", value: String(Math.round(tvCount * 0.28)) },
-              { label: "Não Líderes", value: String(tvCount - Math.round(tvCount * 0.28)) },
-            ]}
-          />
-          <MotivosCard
-            span={2}
-            items={[
-              ["Remuneração", 20],
-              ["Carreira", 15],
-              ["Carga de Trabalho", 10],
-              ["Trabalho Remoto", 10],
-              ["Outros", 45],
-            ]}
-          />
+          <CardRow>
+            {turnoverKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
+          </CardRow>
+          <CardRow>
+            <SplitCard card={{
+              title: "Desligamentos por Cargo",
+              items: [
+                { label: "Líderes", value: String(Math.round(tvCount * 0.28)) },
+                { label: "Não Líderes", value: String(tvCount - Math.round(tvCount * 0.28)) },
+              ],
+            }} />
+            <MotivosCard
+              items={[
+                ["Remuneração", 20],
+                ["Carreira", 15],
+                ["Carga de Trabalho", 10],
+                ["Trabalho Remoto", 10],
+                ["Outros", 45],
+              ]}
+            />
+          </CardRow>
         </CardGrid>
       </CollapsibleSection>
     </div>
