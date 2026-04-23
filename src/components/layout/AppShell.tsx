@@ -17,14 +17,17 @@ import {
 } from "lucide-react";
 import AiPanel from "./AiPanel";
 
+const NAV_ITEMS_PROFILE = [
+  { href: "/employees", label: "Colaboradores", icon: Users, isPage: true },
+  { href: "/org", label: "Organograma", icon: GitBranch, isPage: true }
+];
+
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Painel Geral", icon: LayoutDashboard, isPage: true },
   { href: "/dashboard#workforce", label: "Workforce Planning", icon: Users, isPage: false },
   { href: "/dashboard#diversidade", label: "Diversidade", icon: Globe, isPage: false },
   { href: "/dashboard#performance", label: "Performance & Talentos", icon: TrendingUp, isPage: false },
-  { href: "/dashboard#turnover", label: "Turnover", icon: UserMinus, isPage: false },
-  { href: "/employees", label: "Colaboradores", icon: Users, isPage: true },
-  { href: "/org", label: "Organograma", icon: GitBranch, isPage: true },
+  { href: "/dashboard#turnover", label: "Turnover", icon: UserMinus, isPage: false }
 ];
 
 const PAGE_TITLES: Record<string, string> = {
@@ -58,23 +61,40 @@ export default function AppShell({
   const title = PAGE_TITLES[pathname] ?? "People Analytics";
   const isDetailPage = pathname !== "/dashboard";
 
+  function renderNav(items: typeof NAV_ITEMS) {
+    return (
+      <ul className="space-y-0.5">
+        {items.map((item) => {
+          const isActive = item.isPage ? pathname === item.href : false;
+          const Icon = item.icon;
+          return (
+            <li key={item.href + item.label}>
+              <Link
+                href={item.href}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-blue-50 text-blue-900"
+                    : item.isPage
+                      ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      : "pl-9 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                }`}
+              >
+                {item.isPage && <Icon className="h-4 w-4 shrink-0" />}
+                {item.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* ── Sidebar ── */}
       <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col border-r border-slate-200 bg-white">
-        {/* Logo
-        <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-6">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-900 text-xs font-bold text-white">
-            PA
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">People Analytics</p>
-            <p className="text-xs text-slate-500">Dashboard de Gestão</p>
-          </div>
-        </div> */}
-
         {/* User profile */}
-        <div className="border-b border-slate-200 px-4 py-3 h-16">
+        <div className="px-3 py-3">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-800">
               {initials}
@@ -86,33 +106,15 @@ export default function AppShell({
               </p>
             </div>
           </div>
+          <nav className="flex-1 overflow-y-auto px-0 py-4 pb-0">
+            {renderNav(NAV_ITEMS_PROFILE)}
+          </nav>
         </div>
+        <hr className="mx-3 border-slate-200" />
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <ul className="space-y-0.5">
-            {NAV_ITEMS.map((item) => {
-              const isActive = item.isPage ? pathname === item.href : false;
-              const Icon = item.icon;
-              return (
-                <li key={item.href + item.label}>
-                  <Link
-                    href={item.href}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-blue-50 text-blue-900"
-                        : item.isPage
-                          ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                          : "pl-9 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                    }`}
-                  >
-                    {item.isPage && <Icon className="h-4 w-4 shrink-0" />}
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          {renderNav(NAV_ITEMS)}
         </nav>
 
         {/* Footer */}

@@ -26,7 +26,7 @@ export default function KpiCard({ kpi }: { kpi: KpiSummary }) {
           {isPercent ? kpi.trendValue.toFixed(1) : Math.round(kpi.trendValue)}
           {isPercent ? " p.p." : ""}
         </span>
-        <span className="ml-1 font-normal text-slate-400">vs. anterior</span>
+        <span className="ml-1 font-normal text-slate-400">vs. m</span>
       </div>
 
       {kpi.target > 0 && (
