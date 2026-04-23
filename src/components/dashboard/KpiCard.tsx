@@ -9,14 +9,21 @@ export default function KpiCard({ kpi }: { kpi: KpiSummary }) {
     kpi.trend === "up" ? ArrowUpRightIcon : kpi.trend === "down" ? ArrowDownRightIcon : MinusIcon;
   const isPercent = kpi.unit === "%";
 
+  const targetTooltip = kpi.target > 0
+    ? `Meta: ${isPercent ? `${kpi.target.toFixed(1)}%` : kpi.target.toLocaleString("pt-BR")}`
+    : undefined;
+
   return (
     <div className="rounded-xl bg-white border border-slate-200 p-6 shadow-xs">
       <div className="mb-4 flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-gray-600">{kpi.label}</p>
-          <p className="mt-1 text-3xl font-bold text-slate-900">{kpi.formattedValue}</p>
+          <p className="mt-1 text-3xl font-bold text-slate-900 leading-tight">
+            {kpi.formattedValue}
+            {kpi.sub && <span className="ml-1 text-base font-normal text-slate-400">{kpi.sub}</span>}
+          </p>
         </div>
-        <AlertBadge level={kpi.alert} />
+        {kpi.alert && <AlertBadge level={kpi.alert} tooltip={targetTooltip} />}
       </div>
 
       <div className={`flex items-center gap-1 text-sm font-medium ${trendColor}`}>
@@ -28,12 +35,6 @@ export default function KpiCard({ kpi }: { kpi: KpiSummary }) {
         </span>
         <span className="ml-1 font-normal text-slate-400">vs. m</span>
       </div>
-
-      {kpi.target > 0 && (
-        <p className="mt-3 text-xs text-slate-400">
-          Meta: {isPercent ? `${kpi.target.toFixed(1)}%` : kpi.target.toLocaleString("pt-BR")}
-        </p>
-      )}
     </div>
   );
 }

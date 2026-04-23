@@ -11,7 +11,8 @@ export interface KpiSummary {
   target: number;
   trend: TrendDirection;
   trendValue: number;
-  alert: AlertLevel;
+  alert?: AlertLevel;
+  sub?: string;
   higherIsBetter: boolean;
   description?: string;
 }
@@ -40,6 +41,7 @@ export interface SplitCardItem {
   subtitle?: string;
   sub?: string;
   alert?: AlertLevel;
+  tooltip?: string;
 }
 
 export interface SplitCardData {
