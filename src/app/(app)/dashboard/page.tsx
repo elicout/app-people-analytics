@@ -250,17 +250,17 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-full bg-slate-50 py-6 space-y-8">
+    <div className="min-h-full bg-white py-6 space-y-8">
 
       {/* ══════════ WORKFORCE PLANNING ══════════ */}
-      <CollapsibleSection title="WORKFORCE PLANNING" id="workforce">
+      <CollapsibleSection title="Workforce Planning" id="workforce">
         <div className="space-y-5">
           <KpiGrid kpis={workforceKpis} />
         </div>
       </CollapsibleSection>
 
       {/* ══════════ DIVERSIDADE ══════════ */}
-      <CollapsibleSection title="DIVERSIDADE" id="diversidade">
+      <CollapsibleSection title="Diversidade" id="diversidade">
         {/* 5 KpiCards → row1: 4, row2: 1 — DistributionBar fills the remaining 3 */}
         <CardGrid>
           {diversidadeKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
@@ -274,7 +274,7 @@ export default async function DashboardPage() {
       </CollapsibleSection>
 
       {/* ══════════ PERFORMANCE E TALENTOS ══════════ */}
-      <CollapsibleSection title="PERFORMANCE E TALENTOS" id="performance">
+      <CollapsibleSection title="Performance e Talentos" id="performance">
         {/* 4 KpiCards fill row1 — GD and GT each take 2 cols in row2 */}
         <CardGrid>
           {performanceKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
       </CollapsibleSection>
 
       {/* ══════════ TURNOVER ══════════ */}
-      <CollapsibleSection title="TURNOVER" id="turnover">
+      <CollapsibleSection title="Turnover" id="turnover">
         {/* 4 KpiCards fill row1 — SplitCard + MotivosCard each take 2 cols in row2 */}
         <CardGrid>
           {turnoverKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
