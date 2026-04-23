@@ -1,0 +1,141 @@
+description: >
+  People Analytics data model. All queries MUST include a WHERE clause
+  filtering by the team_id provided in the system context. Never query
+  across teams.
+
+tables:
+  employees:
+    description: >
+      One row per active or on-leave employee. Use this table for headcount,
+      role distribution, salary costs, tenure analysis, and org structure.
+    columns:
+      id: Unique employee identifier.
+      team_id: The team this employee belongs to. Always filter by this.
+      name: Full name of the employee.
+      role: Job title / role (e.g. "Senior Engineer", "Designer").
+      department: Department name (e.g. "Engineering", "Product").
+      email: Work email address.
+      hire_date: Date the employee joined the company (DATE).
+      tenure_months: Integer months since hire_date. Use for tenure distributions.
+      salary_usd: Monthly gross salary in USD. Sum for total team cost.
+      manager_id: ID of this employee's direct manager (Team Leader id).
+      status: One of 'active', 'on_leave', 'terminated'.
+
+  performance:
+    description: >
+      Monthly performance review records per employee. Use for performance
+      trends, score distributions, goal completion rates, and ratings.
+    columns:
+      employee_id: References employees.id.
+      period: Month in 'YYYY-MM' format (e.g. '2024-06').
+      score: Numeric performance score 0-100. Higher is better.
+      goals_completed: Number of goals the employee completed this period.
+      goals_total: Total goals assigned this period (always 8).
+      rating: One of 'exceeds', 'meets', 'below'.
+
+  attendance:
+    description: >
+      Daily attendance records per employee. Use for attendance rates,
+      absenteeism analysis, and leave patterns.
+    columns:
+      employee_id: References employees.id.
+      date: Calendar date (DATE).
+      status: One of 'present', 'absent', 'late', 'on_leave'.
+      hours_worked: Decimal hours worked that day (0 if absent).
+
+  productivity:
+    description: >
+      Monthly productivity metrics per employee. Use for task completion
+      rates, delivery punctuality, and quality scores.
+    columns:
+      employee_id: References employees.id.
+      period: Month in 'YYYY-MM' format.
+      tasks_completed: Number of tasks completed this period.
+      tasks_pending: Number of tasks still pending at period end.
+      delivery_on_time_rate: Fraction 0-1 of tasks delivered on time.
+      quality_score: Quality of output score 0-100.
+
+  overtime:
+    description: >
+      Monthly overtime records per employee. Use for overtime burden analysis,
+      cost projections, and identifying overloaded employees.
+    columns:
+      employee_id: References employees.id.
+      period: Month in 'YYYY-MM' format.
+      regular_hours: Standard working hours in the month (typically 160).
+      overtime_hours: Extra hours worked beyond regular_hours.
+      overtime_cost_usd: Cost of overtime in USD (1.5x hourly rate).
+
+  turnover:
+    description: >
+      Records of employees who have left the company. Use for turnover rate
+      calculations and attrition analysis.
+    columns:
+      employee_id: ID of the departed employee.
+      team_id: Team they belonged to. Always filter by this.
+      termination_date: Date they left (DATE).
+      reason: One of 'voluntary', 'involuntary', 'retirement'.
+
+metrics:
+  attendance_rate:
+    description: Percentage of working days an employee was present or late (not absent).
+    sql: "COUNT(CASE WHEN status IN ('present','late') THEN 1 END) * 1.0 / COUNT(*)"
+
+  avg_performance_score:
+    description: Average performance score across employees or periods.
+    sql: "AVG(score) FROM performance WHERE team_id filters via JOIN on employees"
+
+  total_salary_cost:
+    description: Sum of monthly salaries for the team.
+    sql: "SUM(salary_usd) FROM employees WHERE team_id = '{team_id}' AND status != 'terminated'"
+
+  turnover_rate:
+    description: Number of departures divided by average headcount, for a given period.
+    sql: "COUNT(*) FROM turnover WHERE team_id = '{team_id}'"
+
+few_shot_examples:
+  - question: "Who has the highest overtime hours this month?"
+    sql: >
+      SELECT e.name, o.overtime_hours
+      FROM overtime o
+      JOIN employees e ON e.id = o.employee_id
+      WHERE e.team_id = '{team_id}' AND o.period = '2024-06'
+      ORDER BY o.overtime_hours DESC
+      LIMIT 5;
+
+  - question: "What is the average performance score for my team?"
+    sql: >
+      SELECT AVG(p.score) as avg_score
+      FROM performance p
+      JOIN employees e ON e.id = p.employee_id
+      WHERE e.team_id = '{team_id}';
+
+  - question: "Which employees are below performance expectations?"
+    sql: >
+      SELECT e.name, AVG(p.score) as avg_score
+      FROM performance p
+      JOIN employees e ON e.id = p.employee_id
+      WHERE e.team_id = '{team_id}'
+      GROUP BY e.id, e.name
+      HAVING AVG(p.score) < 70
+      ORDER BY avg_score ASC;
+
+  - question: "What is my team's total salary cost?"
+    sql: >
+      SELECT SUM(salary_usd) as total_cost
+      FROM employees
+      WHERE team_id = '{team_id}' AND status != 'terminated';
+
+  - question: "Show tenure distribution of my team."
+    sql: >
+      SELECT
+        CASE
+          WHEN tenure_months < 12 THEN '< 1 year'
+          WHEN tenure_months < 24 THEN '1-2 years'
+          WHEN tenure_months < 36 THEN '2-3 years'
+          ELSE '3+ years'
+        END as bucket,
+        COUNT(*) as count
+      FROM employees
+      WHERE team_id = '{team_id}'
+      GROUP BY bucket;
