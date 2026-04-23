@@ -62,16 +62,16 @@ export default function KpiChartCard({ kpis, chartHeight = 200 }: Props) {
           const content = (
             <>
               <div className="flex items-start justify-between gap-1 mb-1">
-                <p className={`text-xs font-medium leading-tight ${isActive ? "text-blue-700" : "text-gray-500"}`}>
+                <p className={`text-xs font-medium leading-tight =text-gray-500`}> {/*${isActive ? "text-blue-700" : "text-gray-500"}`}*/}
                   {kpi.label}
                 </p>
                 {kpi.alert && <AlertBadge level={kpi.alert} />}
               </div>
-              <p className={`text-3xl font-bold leading-tight ${isActive ? "text-blue-900" : "text-slate-900"}`}>
+              <p className={`text-3xl font-bold leading-tight text-slate-900`}> {/*${isActive ? "text-blue-700" : "text-gray-500"}`}*/}
                 {kpi.formattedValue}
               </p>
               {hasChart && (
-                <p className={`mt-1 text-[10px] font-medium ${isActive ? "text-blue-500" : "text-gray-400"}`}>
+                <p className={`mt-1 text-[10px] font-medium text-gray-400`}> {/*${isActive ? "text-blue-700" : "text-gray-500"}`}*/}
                   {isActive ? "▴ Visualizando" : "Histórico disponível"}
                 </p>
               )}
@@ -123,7 +123,8 @@ export default function KpiChartCard({ kpis, chartHeight = 200 }: Props) {
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke={active.chart.color ?? "#1d4ed8"}
+                stroke={active.chart.color ?? "#000000"}
+                //stroke={active.chart.color ?? "#1d4ed8"}
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, strokeWidth: 0, fill: active.chart.color ?? "#1d4ed8" }}
