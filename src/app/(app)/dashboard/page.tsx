@@ -3,6 +3,9 @@ import { query } from "@/lib/db/client";
 import { KpiSummary, AlertLevel, TrendDirection } from "@/types";
 import { getAlertLevel, trendDir } from "@/lib/utils";
 import KpiGrid from "@/components/dashboard/KpiGrid";
+import CardGrid from "@/components/dashboard/CardGrid";
+import KpiCard from "@/components/dashboard/KpiCard";
+import DistributionBar from "@/components/dashboard/DistributionBar";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
 
 // ─── DB row types ─────────────────────────────────────────────────────────────
@@ -33,6 +36,7 @@ function kpi(
 function SplitCard({ title, items }: {
   title: string;
   items: Array<{ label: string; value: string; sub?: string }>;
+  span?: number | "fill";
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -52,42 +56,8 @@ function SplitCard({ title, items }: {
   );
 }
 
-function DistributionBar({ title, items, total }: {
-  title: string;
-  items: Array<{ label: string; sublabel?: string; count: number; color?: string }>;
-  total: number;
-}) {
-  const max = Math.max(...items.map((i) => i.count), 1);
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="mb-4 text-sm font-medium text-slate-500">{title}</p>
-      <div className="flex gap-2 items-end h-20">
-        {items.map(({ label, sublabel, count, color }) => {
-          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-          const barH = Math.max(4, Math.round((count / max) * 56));
-          return (
-            <div key={label} className="flex flex-col items-center gap-1 flex-1 group relative">
-              <span className="text-[11px] font-bold text-slate-700">{count}</span>
-              <div
-                style={{ height: barH, background: color ?? "#1e40af" }}
-                className="w-full rounded-t opacity-80"
-              />
-              <span className="text-[9px] text-slate-400 text-center leading-tight">
-                {label}
-                {sublabel && <><br /><span className="text-[8px]">{sublabel}</span></>}
-              </span>
-              <span className="absolute -top-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                {pct}%
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
-function MotivosCard({ items }: { items: Array<[string, number]> }) {
+function MotivosCard({ items }: { items: Array<[string, number]>; span?: number | "fill" }) {
   const max = Math.max(...items.map(([, v]) => v), 1);
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -291,50 +261,52 @@ export default async function DashboardPage() {
 
       {/* ══════════ DIVERSIDADE ══════════ */}
       <CollapsibleSection title="DIVERSIDADE" id="diversidade">
-        <div className="space-y-5">
-          <KpiGrid kpis={diversidadeKpis} />
+        {/* 5 KpiCards → row1: 4, row2: 1 — DistributionBar fills the remaining 3 */}
+        <CardGrid>
+          {diversidadeKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
           <DistributionBar
             title="Distribuição de Cargos"
             items={roleRows.map((r) => ({ label: r.role, count: r.count }))}
             total={hc}
+            span="fill"
           />
-        </div>
+        </CardGrid>
       </CollapsibleSection>
 
       {/* ══════════ PERFORMANCE E TALENTOS ══════════ */}
       <CollapsibleSection title="PERFORMANCE E TALENTOS" id="performance">
-        <div className="space-y-5">
-          <KpiGrid kpis={performanceKpis} />
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <DistributionBar title="Gestão de Desempenho (GD)" items={GD} total={gdTotal} />
-            <DistributionBar title="Gestão de Talentos (GT)" items={GT} total={gdTotal} />
-          </div>
-        </div>
+        {/* 4 KpiCards fill row1 — GD and GT each take 2 cols in row2 */}
+        <CardGrid>
+          {performanceKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
+          <DistributionBar title="Gestão de Desempenho (GD)" items={GD} total={gdTotal} span={2} />
+          <DistributionBar title="Gestão de Talentos (GT)" items={GT} total={gdTotal} span={2} />
+        </CardGrid>
       </CollapsibleSection>
 
       {/* ══════════ TURNOVER ══════════ */}
       <CollapsibleSection title="TURNOVER" id="turnover">
-        <div className="space-y-5">
-          <KpiGrid kpis={turnoverKpis} />
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <SplitCard
-              title="Desligamentos por Cargo"
-              items={[
-                { label: "Líderes", value: String(Math.round(tvCount * 0.28)) },
-                { label: "Não Líderes", value: String(tvCount - Math.round(tvCount * 0.28)) },
-              ]}
-            />
-            <MotivosCard
-              items={[
-                ["Remuneração", 20],
-                ["Carreira", 15],
-                ["Carga de Trabalho", 10],
-                ["Trabalho Remoto", 10],
-                ["Outros", 45],
-              ]}
-            />
-          </div>
-        </div>
+        {/* 4 KpiCards fill row1 — SplitCard + MotivosCard each take 2 cols in row2 */}
+        <CardGrid>
+          {turnoverKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
+          <SplitCard
+            span={2}
+            title="Desligamentos por Cargo"
+            items={[
+              { label: "Líderes", value: String(Math.round(tvCount * 0.28)) },
+              { label: "Não Líderes", value: String(tvCount - Math.round(tvCount * 0.28)) },
+            ]}
+          />
+          <MotivosCard
+            span={2}
+            items={[
+              ["Remuneração", 20],
+              ["Carreira", 15],
+              ["Carga de Trabalho", 10],
+              ["Trabalho Remoto", 10],
+              ["Outros", 45],
+            ]}
+          />
+        </CardGrid>
       </CollapsibleSection>
     </div>
   );
