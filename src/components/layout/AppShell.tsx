@@ -5,29 +5,29 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
-  LayoutDashboard,
-  Users,
-  Globe,
-  TrendingUp,
-  UserMinus,
-  GitBranch,
-  Sparkles,
-  LogOut,
-  ArrowLeft,
-} from "lucide-react";
+  Squares2X2Icon,
+  IdentificationIcon,
+  GlobeAltIcon,
+  ArrowTrendingUpIcon,
+  UserMinusIcon,
+  RectangleGroupIcon,
+  SparklesIcon,
+  ArrowRightOnRectangleIcon,
+  ArrowLeftIcon,
+} from "@heroicons/react/24/solid";
 import AiPanel from "./AiPanel";
 
 const NAV_ITEMS_PROFILE = [
-  { href: "/employees", label: "Colaboradores", icon: Users, isPage: true },
-  { href: "/org", label: "Organograma", icon: GitBranch, isPage: true }
+  { href: "/employees", label: "Colaboradores", icon: IdentificationIcon, isPage: true },
+  { href: "/org", label: "Organograma", icon: RectangleGroupIcon, isPage: true }
 ];
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Painel Geral", icon: LayoutDashboard, isPage: true },
-  { href: "/dashboard#workforce", label: "Workforce Planning", icon: Users, isPage: false },
-  { href: "/dashboard#diversidade", label: "Diversidade", icon: Globe, isPage: false },
-  { href: "/dashboard#performance", label: "Performance & Talentos", icon: TrendingUp, isPage: false },
-  { href: "/dashboard#turnover", label: "Turnover", icon: UserMinus, isPage: false }
+  { href: "/dashboard", label: "Painel Geral", icon: Squares2X2Icon, isPage: true },
+  { href: "/dashboard#workforce", label: "Workforce Planning", icon: IdentificationIcon, isPage: false },
+  { href: "/dashboard#diversidade", label: "Diversidade", icon: GlobeAltIcon, isPage: false },
+  { href: "/dashboard#performance", label: "Performance & Talentos", icon: ArrowTrendingUpIcon, isPage: false },
+  { href: "/dashboard#turnover", label: "Turnover", icon: UserMinusIcon, isPage: false }
 ];
 
 const PAGE_TITLES: Record<string, string> = {
@@ -90,7 +90,7 @@ export default function AppShell({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-white">
       {/* ── Sidebar ── */}
       <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col border-r border-slate-200 bg-white">
         {/* User profile */}
@@ -100,8 +100,8 @@ export default function AppShell({
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-slate-900">{userName}</p>
-              <p className="truncate text-xs text-slate-500">
+              <p className="truncate text-sm font-normal text-gray-900">{userName}</p>
+              <p className="truncate text-xs text-gray-700">
                 {teamName} · {headcount} liderados
               </p>
             </div>
@@ -116,14 +116,15 @@ export default function AppShell({
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           {renderNav(NAV_ITEMS)}
         </nav>
+        <hr className="mx-3 border-slate-200" />
 
         {/* Footer */}
-        <div className="border-t border-slate-200 px-3 py-3">
+        <div className="px-3 py-3">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
           >
-            <LogOut className="h-4 w-4 shrink-0" />
+            <ArrowRightOnRectangleIcon className="h-4 w-4 shrink-0" />
             Sair
           </button>
         </div>
@@ -139,7 +140,7 @@ export default function AppShell({
                 href="/dashboard"
                 className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeftIcon className="h-4 w-4" />
                 Voltar
               </Link>
             )}
@@ -149,7 +150,7 @@ export default function AppShell({
             onClick={() => setAiOpen((v) => !v)}
             className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
           >
-            <Sparkles className="h-4 w-4" />
+            <SparklesIcon className="h-4 w-4" />
             Assistente IA
           </button>
         </header>

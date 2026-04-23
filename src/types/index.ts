@@ -16,6 +16,37 @@ export interface KpiSummary {
   description?: string;
 }
 
+export interface KpiChartPoint {
+  month: string;  // "2024-01"
+  value: number;
+}
+
+export interface KpiChartItem {
+  id: string;
+  label: string;
+  formattedValue: string;
+  alert?: AlertLevel;
+  chart?: {
+    data: KpiChartPoint[];
+    color?: string;
+    unit?: string;  // appended to tooltip value: "" | "%" | "h" etc.
+  };
+}
+
+export interface SplitCardItem {
+  label: string;
+  value: string;
+  showLabel?: boolean;
+  subtitle?: string;
+  sub?: string;
+  alert?: AlertLevel;
+}
+
+export interface SplitCardData {
+  title: string;
+  items: SplitCardItem[];
+}
+
 export interface TeamLeader {
   id: string;
   name: string;
