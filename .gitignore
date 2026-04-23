@@ -50,3 +50,7 @@ docs/b3-peopleanalytics-main/
 # Claude Code workspace config — machine-specific
 .claude/
 .mcp.json
+
+# Claude Code skills — tooling, not application code
+.agents/
+skills-lock.json
