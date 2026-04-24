@@ -295,7 +295,12 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
           return (
             <button
               key={key}
-              onClick={() => { setSelectedMetric(prev => prev === key ? null : key); setFilterLevels(new Set()); }}
+              onClick={() => {
+                const next = selectedMetric === key ? null : key;
+                setSelectedMetric(next);
+                setFilterLevels(new Set());
+                if (next !== null) setPanelCollapsed(true);
+              }}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 isSelected
                   ? "bg-blue-600 text-white"
