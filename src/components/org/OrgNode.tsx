@@ -2,7 +2,7 @@
 
 import { Handle, Position } from "@xyflow/react";
 import { useState } from "react";
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
+import { ChevronDownIcon } from "@heroicons/react/24/solid";
 import type { AlertLevel, EmployeeWithMetrics } from "@/types";
 
 const alertRing: Record<AlertLevel, string> = {
@@ -98,9 +98,10 @@ export function TLNode({ data }: { data: TLNodeData }) {
           {collapsible && (
             <div className="flex items-center gap-1 shrink-0">
               <span className="text-xs text-blue-200">{employeeCount}</span>
-              {isCollapsed
-                ? <ChevronRightIcon className="w-4 h-4 text-blue-200" />
-                : <ChevronDownIcon className="w-4 h-4 text-blue-200" />}
+              <ChevronDownIcon
+                className="w-4 h-4 text-blue-200 transition-transform duration-200"
+                style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+              />
             </div>
           )}
         </div>
@@ -115,10 +116,11 @@ export function TLNode({ data }: { data: TLNodeData }) {
 export type EmpNodeData = Record<string, unknown> & {
   employee: EmployeeWithMetrics;
   alertLevel: AlertLevel | null;
+  isCollapsing: boolean;
 };
 
 export function EmployeeNode({ data }: { data: EmpNodeData }) {
-  const { employee: emp, alertLevel } = data;
+  const { employee: emp, alertLevel, isCollapsing } = data;
   const [hovered, setHovered] = useState(false);
   const ring = alertLevel ? alertRing[alertLevel] : "";
 
@@ -127,6 +129,7 @@ export function EmployeeNode({ data }: { data: EmpNodeData }) {
       <Handle type="target" position={Position.Top} style={{ opacity: 0, pointerEvents: "none" }} />
       <div
         className="relative"
+        style={{ animation: isCollapsing ? "nodeExit 200ms ease-in forwards" : "nodeEnter 200ms ease-out" }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >

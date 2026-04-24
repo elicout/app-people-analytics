@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ReactFlow, Controls, Background, useNodesState, useEdgesState, type Node, type Edge } from "@xyflow/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ReactFlow, Controls, Background, BackgroundVariant, useNodesState, useEdgesState, type Node, type Edge } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { TLNode, EmployeeNode, type TLNodeData, type EmpNodeData } from "./OrgNode";
 import { getAlertLevel } from "@/lib/utils";
@@ -37,16 +37,32 @@ interface OrgFlowProps {
   director?: TeamLeader;
 }
 
+const COLLAPSE_MS = 200;
+
 export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowProps) {
   const [selectedMetric, setSelectedMetric] = useState<MetricKey | null>(null);
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set());
+  const [collapsingTeams, setCollapsingTeams] = useState<Set<string>>(new Set());
+
+  // Refs so the stable callback can read current state without re-creating
+  const collapsedRef = useRef(collapsedTeams);
+  const collapsingRef = useRef(collapsingTeams);
+  collapsedRef.current = collapsedTeams;
+  collapsingRef.current = collapsingTeams;
 
   const handleToggleCollapse = useCallback((teamId: string) => {
-    setCollapsedTeams(prev => {
-      const next = new Set(prev);
-      if (next.has(teamId)) next.delete(teamId); else next.add(teamId);
-      return next;
-    });
+    if (collapsingRef.current.has(teamId)) return; // Ignore during exit animation
+    if (collapsedRef.current.has(teamId)) {
+      // Expanding: show nodes immediately (entry animation plays on mount)
+      setCollapsedTeams(prev => { const n = new Set(prev); n.delete(teamId); return n; });
+    } else {
+      // Collapsing: trigger exit animation, then remove nodes after it finishes
+      setCollapsingTeams(prev => new Set(prev).add(teamId));
+      setTimeout(() => {
+        setCollapsedTeams(prev => new Set(prev).add(teamId));
+        setCollapsingTeams(prev => { const n = new Set(prev); n.delete(teamId); return n; });
+      }, COLLAPSE_MS);
+    }
   }, []);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -89,6 +105,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
         .filter(e => e.teamId === tl.teamId)
         .sort((a, b) => a.roleLevel - b.roleLevel || a.role.localeCompare(b.role));
       const isCollapsed = collapsedTeams.has(tl.teamId);
+      const isCollapsing = collapsingTeams.has(tl.teamId);
 
       nextNodes.push({
         id: tl.id,
@@ -120,7 +137,8 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
         });
       }
 
-      if (!isCollapsed) {
+      // Show employees when expanded OR while the exit animation is playing
+      if (!isCollapsed || isCollapsing) {
         teamEmps.forEach((emp, empIndex) => {
           const alertLevel: AlertLevel | null = selectedMetric
             ? (() => {
@@ -135,7 +153,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
             type: "employee",
             position: { x, y: tlYOffset + (empIndex + 1) * ROW_H },
             width: NODE_W,
-            data: { employee: emp, alertLevel },
+            data: { employee: emp, alertLevel, isCollapsing },
             draggable: false,
           });
 
@@ -151,7 +169,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
     });
 
     return { nextNodes, nextEdges };
-  }, [employees, teamLeaders, director, collapsedTeams, selectedMetric, handleToggleCollapse]);
+  }, [employees, teamLeaders, director, collapsedTeams, collapsingTeams, selectedMetric, handleToggleCollapse]);
 
   useEffect(() => {
     setNodes(computed.nextNodes);
@@ -198,7 +216,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
           nodesConnectable={false}
         >
           <Controls showInteractive={false} />
-          <Background gap={20} color="#f1f5f9" />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#9ca3af" />
         </ReactFlow>
       </div>
     </div>

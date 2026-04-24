@@ -34,3 +34,22 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-page-enter {
+  animation: pageEnter 0.2s ease-out;
+}
+
+@keyframes nodeEnter {
+  from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0)     scale(1);    }
+}
+
+@keyframes nodeExit {
+  from { opacity: 1; transform: translateY(0)     scale(1);    }
+  to   { opacity: 0; transform: translateY(-10px) scale(0.95); }
+}
