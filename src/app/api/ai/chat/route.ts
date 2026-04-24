@@ -14,8 +14,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Message is required" }, { status: 400 });
   }
 
-  const { teamId, teamName } = session.user;
-  const agent = createPeopleAnalyticsAgent(teamId, teamName);
+  const { email, teamName } = session.user;
+  const agent = createPeopleAnalyticsAgent(email!, teamName);
 
   try {
     const result = await agent.invoke({

@@ -1,15 +1,20 @@
 import { Database } from "duckdb-async";
 import { seedDatabase } from "./seed";
 
-// Use global to survive Next.js hot-module reloads across workers
-const globalForDb = global as typeof global & { _db?: Database };
+// Bump this whenever the DB schema changes to force a reseed on next request.
+const SCHEMA_VERSION = 2;
+
+const globalForDb = global as typeof global & { _db?: Database; _dbVersion?: number };
 
 export async function getDb(): Promise<Database> {
-  if (globalForDb._db) return globalForDb._db;
+  if (globalForDb._db && globalForDb._dbVersion === SCHEMA_VERSION) {
+    return globalForDb._db;
+  }
 
   const db = await Database.create(":memory:");
   await seedDatabase(db);
   globalForDb._db = db;
+  globalForDb._dbVersion = SCHEMA_VERSION;
   return db;
 }
 

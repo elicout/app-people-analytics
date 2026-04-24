@@ -15,12 +15,12 @@ interface EmpRow {
 
 export default async function EmployeesPage() {
   const session = await auth();
-  const tid = session!.user.teamId;
+  const ue = session!.user.email!;
 
   const employees = await query<EmpRow>(
     `SELECT id, name, role, department, email, CAST(hire_date AS VARCHAR) as hire_date, tenure_months, salary_usd, status
-     FROM employees WHERE team_id = ? AND status != 'terminated' ORDER BY name`,
-    [tid]
+     FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status != 'terminated' ORDER BY name`,
+    [ue, ue]
   );
 
   return (

@@ -66,7 +66,9 @@ function MotivosCard({ items }: { items: Array<[string, number]>; span?: number 
 // ─── page ─────────────────────────────────────────────────────────────────────
 export default async function DashboardPage() {
   const session = await auth();
-  const tid = session!.user.teamId;
+  const ue = session!.user.email!;  // user email — the RLS key
+  const rp = [ue, ue];              // params for employee RLS: CONTAINS + self-exclusion
+  const tp = [ue];                  // params for turnover RLS: CONTAINS only
 
   const [
     hcRows,
@@ -83,43 +85,46 @@ export default async function DashboardPage() {
     monthlyTurnover,
     monthlyHC,
   ] = await Promise.all([
-    query<N>("SELECT CAST(COUNT(*) AS INTEGER) as value FROM employees WHERE team_id=? AND status!='terminated'", [tid]),
-    query<N>("SELECT ROUND(SUM(salary_usd), 0) as value FROM employees WHERE team_id=? AND status!='terminated'", [tid]),
+    query<N>("SELECT CAST(COUNT(*) AS INTEGER) as value FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status!='terminated'", rp),
+    query<N>("SELECT ROUND(SUM(salary_usd), 0) as value FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status!='terminated'", rp),
     query<MonthCount>(
       `SELECT CAST(DATE_TRUNC('month', hire_date) AS VARCHAR) as month,
               CAST(COUNT(*) AS INTEGER) as count
-       FROM employees WHERE team_id=?
+       FROM employees WHERE CONTAINS(manager_chain,?) AND email!=?
        GROUP BY DATE_TRUNC('month', hire_date) ORDER BY 1`,
-      [tid]
+      rp
     ),
     query<{ rate: number }>(
       `SELECT ROUND(100.0 * COUNT(CASE WHEN a.status='present' THEN 1 END) /
               NULLIF(COUNT(*), 0), 1) as rate
-       FROM attendance a JOIN employees e ON e.id=a.employee_id WHERE e.team_id=?`,
-      [tid]
+       FROM attendance a JOIN employees e ON e.id=a.employee_id
+       WHERE CONTAINS(e.manager_chain,?) AND e.email!=?`,
+      rp
     ),
     query<{ rate: number }>(
       `SELECT ROUND(AVG(p.delivery_on_time_rate) * 100, 1) as rate
-       FROM productivity p JOIN employees e ON e.id=p.employee_id WHERE e.team_id=?`,
-      [tid]
+       FROM productivity p JOIN employees e ON e.id=p.employee_id
+       WHERE CONTAINS(e.manager_chain,?) AND e.email!=?`,
+      rp
     ),
     query<{ ot_hours: number }>(
       `SELECT CAST(SUM(o.overtime_hours) AS INTEGER) as ot_hours
-       FROM overtime o JOIN employees e ON e.id=o.employee_id WHERE e.team_id=?`,
-      [tid]
+       FROM overtime o JOIN employees e ON e.id=o.employee_id
+       WHERE CONTAINS(e.manager_chain,?) AND e.email!=?`,
+      rp
     ),
     query<RoleRow>(
       `SELECT role, CAST(COUNT(*) AS INTEGER) as count
-       FROM employees WHERE team_id=? AND status!='terminated'
+       FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status!='terminated'
        GROUP BY role ORDER BY count DESC`,
-      [tid]
+      rp
     ),
     query<{ leader_tenure: number; nonleader_tenure: number }>(
       `SELECT
          ROUND(AVG(CASE WHEN tenure_months > 24 THEN tenure_months END), 0) as leader_tenure,
          ROUND(AVG(CASE WHEN tenure_months <= 24 THEN tenure_months END), 0) as nonleader_tenure
-       FROM employees WHERE team_id=? AND status!='terminated'`,
-      [tid]
+       FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status!='terminated'`,
+      rp
     ),
     query<ClusterRow>(
       `SELECT cluster, CAST(COUNT(*) AS INTEGER) as count FROM (
@@ -132,33 +137,33 @@ export default async function DashboardPage() {
              ELSE 'NA'
            END as cluster
          FROM employees e LEFT JOIN performance p ON e.id=p.employee_id
-         WHERE e.team_id=? GROUP BY e.id
+         WHERE CONTAINS(e.manager_chain,?) AND e.email!=? GROUP BY e.id
        ) sub GROUP BY cluster
        ORDER BY CASE cluster WHEN 'CE' THEN 1 WHEN 'FE' THEN 2 WHEN 'CA' THEN 3 WHEN 'PA' THEN 4 ELSE 5 END`,
-      [tid]
+      rp
     ),
     query<N>(
       `SELECT CAST(COUNT(*) AS INTEGER) as value FROM (
          SELECT e.id FROM employees e JOIN performance p ON e.id=p.employee_id
-         WHERE e.team_id=? GROUP BY e.id HAVING AVG(p.score) >= 80
+         WHERE CONTAINS(e.manager_chain,?) AND e.email!=? GROUP BY e.id HAVING AVG(p.score) >= 80
        ) sub`,
-      [tid]
+      rp
     ),
-    query<N>("SELECT CAST(COUNT(*) AS INTEGER) as value FROM turnover WHERE team_id=?", [tid]),
+    query<N>("SELECT CAST(COUNT(*) AS INTEGER) as value FROM turnover WHERE CONTAINS(manager_chain,?)", tp),
     query<MonthCount>(
       `SELECT CAST(DATE_TRUNC('month', termination_date) AS VARCHAR) as month,
               CAST(COUNT(*) AS INTEGER) as count
-       FROM turnover WHERE team_id=? GROUP BY 1 ORDER BY 1`,
-      [tid]
+       FROM turnover WHERE CONTAINS(manager_chain,?) GROUP BY 1 ORDER BY 1`,
+      tp
     ),
     query<MonthCount>(
       `SELECT month, CAST(SUM(count) OVER (ORDER BY month) AS INTEGER) as count FROM (
          SELECT CAST(DATE_TRUNC('month', hire_date) AS VARCHAR) as month,
                 CAST(COUNT(*) AS INTEGER) as count
-         FROM employees WHERE team_id=?
+         FROM employees WHERE CONTAINS(manager_chain,?) AND email!=?
          GROUP BY DATE_TRUNC('month', hire_date)
        ) ORDER BY month`,
-      [tid]
+      rp
     ),
   ]);
 

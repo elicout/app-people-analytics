@@ -25,6 +25,7 @@ export const authConfig: NextAuthConfig = {
           email: tl.email,
           teamId: tl.teamId,
           teamName: tl.teamName,
+          role: tl.role,
         };
       },
     }),
@@ -34,12 +35,14 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         token.teamId = (user as { teamId: string }).teamId;
         token.teamName = (user as { teamName: string }).teamName;
+        token.role = (user as { role: "tl" | "director" }).role;
       }
       return token;
     },
     session({ session, token }) {
       session.user.teamId = token.teamId as string;
       session.user.teamName = token.teamName as string;
+      session.user.role = token.role as "tl" | "director";
       return session;
     },
   },
