@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -13,22 +13,44 @@ import {
   RectangleGroupIcon,
   SparklesIcon,
   ArrowRightOnRectangleIcon,
-  ArrowLeftIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/solid";
 import AiPanel from "./AiPanel";
 
-const NAV_ITEMS_PROFILE = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  isPage: boolean;
+};
+
+const NAV_ITEMS_PROFILE: NavItem[] = [
   { href: "/employees", label: "Colaboradores", icon: IdentificationIcon, isPage: true },
   { href: "/org", label: "Organograma", icon: RectangleGroupIcon, isPage: true }
 ];
 
-const NAV_ITEMS = [
+const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Painel Geral", icon: Squares2X2Icon, isPage: true },
   { href: "/dashboard#workforce", label: "Workforce Planning", icon: IdentificationIcon, isPage: false },
   { href: "/dashboard#diversidade", label: "Diversidade", icon: GlobeAltIcon, isPage: false },
   { href: "/dashboard#performance", label: "Performance & Talentos", icon: ArrowTrendingUpIcon, isPage: false },
   { href: "/dashboard#turnover", label: "Turnover", icon: UserMinusIcon, isPage: false }
 ];
+
+function groupNavItems(items: NavItem[]) {
+  const groups: { page: NavItem; children: NavItem[] }[] = [];
+  let current: { page: NavItem; children: NavItem[] } | null = null;
+  for (const item of items) {
+    if (item.isPage) {
+      current = { page: item, children: [] };
+      groups.push(current);
+    } else if (current) {
+      current.children.push(item);
+    }
+  }
+  return groups;
+}
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Painel de Indicadores",
@@ -57,31 +79,80 @@ export default function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
   const [aiOpen, setAiOpen] = useState(false);
+  const [expandedActive, setExpandedActive] = useState<Record<string, boolean>>({});
   const initials = getInitials(userName);
   const title = PAGE_TITLES[pathname] ?? "People Analytics";
   const isDetailPage = pathname !== "/dashboard";
 
-  function renderNav(items: typeof NAV_ITEMS) {
+  useEffect(() => {
+    setExpandedActive({});
+  }, [pathname]);
+
+  function renderNav(items: NavItem[]) {
+    const groups = groupNavItems(items);
     return (
       <ul className="space-y-0.5">
-        {items.map((item) => {
-          const isActive = item.isPage ? pathname === item.href : false;
-          const Icon = item.icon;
+        {groups.map(({ page, children }) => {
+          const isActive = pathname === page.href;
+          const hasChildren = children.length > 0;
+          const isOpen = isActive && (expandedActive[page.href] ?? false);
+          const Icon = page.icon;
           return (
-            <li key={item.href + item.label}>
+            <li key={page.href}>
               <Link
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                href={page.href}
+                onClick={(e) => {
+                  if (isActive && hasChildren) {
+                    e.preventDefault();
+                    setExpandedActive((prev) => ({ ...prev, [page.href]: !prev[page.href] }));
+                  }
+                }}
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-blue-50 text-blue-900"
-                    : item.isPage
-                      ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                      : "pl-9 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                    ? "bg-gray-200 text-gray-900"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
-                {item.isPage && <Icon className="h-4 w-4 shrink-0" />}
-                {item.label}
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1">{page.label}</span>
+                {hasChildren && (
+                  <ChevronRightIcon
+                    className={`h-3.5 w-3.5 shrink-0 transition-transform duration-300 ease-in-out ${
+                      isOpen ? "rotate-90" : "rotate-0"
+                    }`}
+                  />
+                )}
               </Link>
+
+              {hasChildren && (
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <ul className="mt-0.5 space-y-0.5 pb-1">
+                      {children.map((child) => (
+                        <li key={child.href + child.label}>
+                          <Link
+                            href={child.href}
+                            onClick={(e) => {
+                              const hash = child.href.split("#")[1];
+                              if (hash && pathname === page.href) {
+                                e.preventDefault();
+                                document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+                              }
+                            }}
+                            className="flex items-center gap-3 rounded-lg py-2 pl-9 pr-3 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+                          >
+                            {child.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
             </li>
           );
         })}
@@ -92,11 +163,11 @@ export default function AppShell({
   return (
     <div className="flex h-screen overflow-hidden bg-white">
       {/* ── Sidebar ── */}
-      <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col border-r border-slate-200 bg-white">
+      <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col bg-gray-50">
         {/* User profile */}
         <div className="px-3 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-800">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-sm font-bold text-white">
               {initials}
             </div>
             <div className="min-w-0">
@@ -110,7 +181,7 @@ export default function AppShell({
             {renderNav(NAV_ITEMS_PROFILE)}
           </nav>
         </div>
-        <hr className="mx-3 border-slate-200" />
+        <hr className="mx-3 border-gray-100" />
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
@@ -138,9 +209,9 @@ export default function AppShell({
             {isDetailPage && (
               <Link
                 href="/dashboard"
-                className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
               >
-                <ArrowLeftIcon className="h-4 w-4" />
+                <ChevronLeftIcon className="h-4 w-4" />
                 Voltar
               </Link>
             )}
@@ -156,7 +227,7 @@ export default function AppShell({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main key={pathname} className="flex-1 overflow-y-auto animate-page-enter">{children}</main>
       </div>
 
       {/* AI panel */}
