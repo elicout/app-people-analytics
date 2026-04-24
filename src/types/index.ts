@@ -73,7 +73,7 @@ export interface Employee {
   managerId: string | null;
   managerChain: string;
   avatarUrl?: string;
-  status: "active" | "on_leave" | "terminated";
+  status: "active" | "on_leave" | "terminated" | "open";
 }
 
 export interface EmployeeMetrics {
