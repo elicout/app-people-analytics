@@ -2,7 +2,7 @@ import { Database } from "duckdb-async";
 import { seedDatabase } from "./seed";
 
 // Bump this whenever the DB schema changes to force a reseed on next request.
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 4;
 
 const globalForDb = global as typeof global & { _db?: Database; _dbVersion?: number };
 

@@ -3,6 +3,7 @@
 import { Handle, Position } from "@xyflow/react";
 import { useState } from "react";
 import { ChevronDownIcon } from "@heroicons/react/24/solid";
+import { BriefcaseIcon } from "@heroicons/react/24/outline";
 import type { AlertLevel, EmployeeWithMetrics } from "@/types";
 
 const alertRing: Record<AlertLevel, string> = {
@@ -144,6 +145,32 @@ export function EmployeeNode({ data }: { data: EmpNodeData }) {
           </div>
         </div>
       </div>
+    </>
+  );
+}
+
+// ── Open position node ────────────────────────────────────────
+
+export function OpenPositionNode({ data }: { data: EmpNodeData }) {
+  const { employee: emp, isCollapsing } = data;
+
+  return (
+    <>
+      <Handle type="target" position={Position.Top} style={{ opacity: 0, pointerEvents: "none" }} />
+      <div
+        style={{ animation: isCollapsing ? "nodeExit 200ms ease-in forwards" : "nodeEnter 200ms ease-out" }}
+      >
+        <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border-2 border-dashed border-gray-200 w-64 cursor-default">
+          <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
+            <BriefcaseIcon className="w-4 h-4 text-gray-300" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-400 truncate">{emp.role}</p>
+            <p className="text-xs text-gray-300 truncate">Vaga Aberta</p>
+          </div>
+        </div>
+      </div>
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0, pointerEvents: "none" }} />
     </>
   );
 }

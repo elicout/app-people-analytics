@@ -77,11 +77,16 @@ export const EMPLOYEES: Employee[] = [
   { id: "emp-011", teamId: "team-gamma", name: "Fatima Al-Hassan", role: "Engineer",      roleLevel: 3, department: "Engineering",    email: "fatima.al@company.com",    hireDate: "2021-01-10", tenureMonths: 39, salaryUsd: 8500,  managerId: "tl-003", managerChain: "priya.nair@company.com,ana.sousa@company.com", status: "active" },
   { id: "emp-012", teamId: "team-gamma", name: "Oscar Mendes",     role: "DevOps",        roleLevel: 3, department: "Infrastructure", email: "oscar.mendes@company.com", hireDate: "2022-06-15", tenureMonths: 22, salaryUsd: 8200,  managerId: "tl-003", managerChain: "priya.nair@company.com,ana.sousa@company.com", status: "active" },
   { id: "emp-013", teamId: "team-gamma", name: "Hana Suzuki",      role: "Engineer",      roleLevel: 3, department: "Engineering",    email: "hana.suzuki@company.com",  hireDate: "2023-08-01", tenureMonths: 8,  salaryUsd: 6800,  managerId: "tl-003", managerChain: "priya.nair@company.com,ana.sousa@company.com", status: "active" },
+
+  // Open positions (no person — hierarchy data only, no metrics records generated)
+  { id: "pos-001", teamId: "team-alpha", name: "", role: "Senior Engineer",  roleLevel: 2, department: "Engineering",    email: "", hireDate: "2099-01-01", tenureMonths: 0, salaryUsd: 0, managerId: "tl-001", managerChain: "sarah.chen@company.com,ana.sousa@company.com",   status: "open" },
+  { id: "pos-002", teamId: "team-beta",  name: "", role: "Data Scientist",   roleLevel: 3, department: "Analytics",     email: "", hireDate: "2099-01-01", tenureMonths: 0, salaryUsd: 0, managerId: "tl-002", managerChain: "marcus.rivera@company.com,ana.sousa@company.com", status: "open" },
+  { id: "pos-003", teamId: "team-gamma", name: "", role: "DevOps Engineer",  roleLevel: 3, department: "Infrastructure", email: "", hireDate: "2099-01-01", tenureMonths: 0, salaryUsd: 0, managerId: "tl-003", managerChain: "priya.nair@company.com,ana.sousa@company.com",   status: "open" },
 ];
 
 const PERIODS = ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06"];
 
-export const PERFORMANCE_RECORDS: PerformanceRecord[] = EMPLOYEES.flatMap((emp) =>
+export const PERFORMANCE_RECORDS: PerformanceRecord[] = EMPLOYEES.filter(emp => emp.status !== "open").flatMap((emp) =>
   PERIODS.map((period) => ({
     employeeId: emp.id,
     period,
@@ -92,21 +97,33 @@ export const PERFORMANCE_RECORDS: PerformanceRecord[] = EMPLOYEES.flatMap((emp) 
   }))
 );
 
-export const ATTENDANCE_RECORDS: AttendanceRecord[] = EMPLOYEES.flatMap((emp) => {
+export const ATTENDANCE_RECORDS: AttendanceRecord[] = EMPLOYEES.filter(emp => emp.status !== "open").flatMap((emp) => {
+  // emp-002 (Aisha): 15/30 = 50% → yellow | emp-003 (Tom): 12/30 = 40% → red
+  const fixedPresentDays = emp.id === "emp-002" ? 15 : emp.id === "emp-003" ? 12 : null;
   const records: AttendanceRecord[] = [];
   for (let d = 1; d <= 30; d++) {
-    const rand = Math.random();
+    let status: AttendanceRecord["status"];
+    let hoursWorked: number;
+    if (fixedPresentDays !== null) {
+      const present = d <= fixedPresentDays;
+      status = present ? "present" : "absent";
+      hoursWorked = present ? 8 : 0;
+    } else {
+      const rand = Math.random();
+      status = rand > 0.9 ? "absent" : rand > 0.85 ? "late" : rand > 0.8 ? "on_leave" : "present";
+      hoursWorked = rand > 0.9 ? 0 : rand > 0.85 ? 6 : 8;
+    }
     records.push({
       employeeId: emp.id,
       date: `2024-06-${String(d).padStart(2, "0")}`,
-      status: rand > 0.9 ? "absent" : rand > 0.85 ? "late" : rand > 0.8 ? "on_leave" : "present",
-      hoursWorked: rand > 0.9 ? 0 : rand > 0.85 ? 6 : 8,
+      status,
+      hoursWorked,
     });
   }
   return records;
 });
 
-export const PRODUCTIVITY_RECORDS: ProductivityRecord[] = EMPLOYEES.flatMap((emp) =>
+export const PRODUCTIVITY_RECORDS: ProductivityRecord[] = EMPLOYEES.filter(emp => emp.status !== "open").flatMap((emp) =>
   PERIODS.map((period) => ({
     employeeId: emp.id,
     period,
@@ -117,7 +134,7 @@ export const PRODUCTIVITY_RECORDS: ProductivityRecord[] = EMPLOYEES.flatMap((emp
   }))
 );
 
-export const OVERTIME_RECORDS: OvertimeRecord[] = EMPLOYEES.flatMap((emp) =>
+export const OVERTIME_RECORDS: OvertimeRecord[] = EMPLOYEES.filter(emp => emp.status !== "open").flatMap((emp) =>
   PERIODS.map((period) => {
     const ot = Math.floor(Math.random() * 15);
     return {
