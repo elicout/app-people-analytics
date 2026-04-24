@@ -17,13 +17,15 @@ export async function seedDatabase(db: Database): Promise<void> {
       team_id VARCHAR NOT NULL,
       name VARCHAR,
       role VARCHAR,
+      role_level INTEGER,
       department VARCHAR,
       email VARCHAR,
       hire_date DATE,
       tenure_months INTEGER,
       salary_usd DECIMAL(10,2),
       manager_id VARCHAR,
-      status VARCHAR
+      status VARCHAR,
+      manager_chain VARCHAR
     );
 
     CREATE TABLE IF NOT EXISTS performance (
@@ -67,7 +69,8 @@ export async function seedDatabase(db: Database): Promise<void> {
       employee_id VARCHAR PRIMARY KEY,
       team_id VARCHAR,
       termination_date DATE,
-      reason VARCHAR
+      reason VARCHAR,
+      manager_chain VARCHAR
     );
   `);
 
@@ -79,10 +82,10 @@ export async function seedDatabase(db: Database): Promise<void> {
   }
 
   const empStmt = await conn.prepare(
-    "INSERT INTO employees VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO employees VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
   for (const e of EMPLOYEES) {
-    await empStmt.run(e.id, e.teamId, e.name, e.role, e.department, e.email, e.hireDate, e.tenureMonths, e.salaryUsd, e.managerId, e.status);
+    await empStmt.run(e.id, e.teamId, e.name, e.role, e.roleLevel, e.department, e.email, e.hireDate, e.tenureMonths, e.salaryUsd, e.managerId, e.status, e.managerChain);
   }
   await empStmt.finalize();
 
@@ -119,10 +122,10 @@ export async function seedDatabase(db: Database): Promise<void> {
   await otStmt.finalize();
 
   const tvStmt = await conn.prepare(
-    "INSERT INTO turnover VALUES (?, ?, ?, ?)"
+    "INSERT INTO turnover VALUES (?, ?, ?, ?, ?)"
   );
   for (const t of TURNOVER_RECORDS) {
-    await tvStmt.run(t.employeeId, t.teamId, t.terminationDate, t.reason);
+    await tvStmt.run(t.employeeId, t.teamId, t.terminationDate, t.reason, t.managerChain);
   }
   await tvStmt.finalize();
 

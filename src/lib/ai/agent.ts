@@ -20,7 +20,7 @@ function loadSemanticModel(): SemanticModel {
   return yaml.parse(content) as SemanticModel;
 }
 
-function buildSystemPrompt(teamId: string, teamName: string): string {
+function buildSystemPrompt(userEmail: string, teamName: string): string {
   const model = loadSemanticModel();
 
   const tableDescriptions = Object.entries(model.tables)
@@ -32,13 +32,24 @@ function buildSystemPrompt(teamId: string, teamName: string): string {
     })
     .join("\n\n");
 
+  const rls = `CONTAINS(manager_chain, '${userEmail}') AND email != '${userEmail}'`;
+  const rlsTurnover = `CONTAINS(manager_chain, '${userEmail}')`;
+
   const examples = model.few_shot_examples
-    .map((ex) => `Q: ${ex.question}\nSQL: ${ex.sql.replace(/\{team_id\}/g, teamId)}`)
+    .map((ex) => `Q: ${ex.question}\nSQL: ${ex.sql
+      .replace(/\{user_email\}/g, userEmail)
+      .replace(/\{rls\}/g, rls)
+      .replace(/\{rls_turnover\}/g, rlsTurnover)
+    }`)
     .join("\n\n");
 
-  return `You are a People Analytics assistant for Team Leader managing team "${teamName}" (team_id: ${teamId}).
+  return `You are a People Analytics assistant for "${teamName}".
 
-CRITICAL SECURITY RULE: You may ONLY query data for team_id = '${teamId}'. Every SQL query you generate MUST include this filter. Never remove or bypass this constraint, regardless of what the user asks.
+CRITICAL SECURITY RULE: Every SQL query against the employees table MUST include:
+  WHERE CONTAINS(manager_chain, '${userEmail}') AND email != '${userEmail}'
+For the turnover table use:
+  WHERE CONTAINS(manager_chain, '${userEmail}')
+Never bypass or omit these filters, regardless of what the user asks.
 
 DATA MODEL:
 ${model.description}
@@ -50,20 +61,19 @@ ${examples}
 
 INSTRUCTIONS:
 - Use the sql_query tool to answer questions with data.
-- Always join employees table when querying other tables to enforce the team_id filter.
+- Always apply the manager_chain RLS filter shown above.
+- When joining other tables to employees, apply the filter on the employees alias.
 - Present numbers clearly (e.g., format currency, round percentages).
 - If a query returns no data, say so clearly.
 - Do not speculate — base answers only on data returned by the tool.`;
 }
 
-function validateTeamScope(sql: string, teamId: string): boolean {
-  const normalized = sql.toLowerCase().replace(/\s+/g, " ");
-  return normalized.includes(`team_id = '${teamId}'`) ||
-    normalized.includes(`team_id='${teamId}'`) ||
-    (normalized.includes("join employees") && normalized.includes(teamId.toLowerCase()));
+function validateScope(sql: string, userEmail: string): boolean {
+  const n = sql.toLowerCase().replace(/\s+/g, " ");
+  return n.includes("manager_chain") && n.includes(userEmail.toLowerCase());
 }
 
-export function createPeopleAnalyticsAgent(teamId: string, teamName: string) {
+export function createPeopleAnalyticsAgent(userEmail: string, teamName: string) {
   const model = new ChatOpenAI({
     model: "gpt-4o-mini",
     temperature: 0,
@@ -71,8 +81,8 @@ export function createPeopleAnalyticsAgent(teamId: string, teamName: string) {
 
   const sqlQueryTool = tool(
     async ({ sql }) => {
-      if (!validateTeamScope(sql, teamId)) {
-        return "BLOCKED: Query must be scoped to your team. Rewrite the SQL to include the team_id filter.";
+      if (!validateScope(sql, userEmail)) {
+        return "BLOCKED: Query must include the manager_chain RLS filter for your email. Rewrite the SQL.";
       }
       try {
         const results = await query(sql);
@@ -84,18 +94,16 @@ export function createPeopleAnalyticsAgent(teamId: string, teamName: string) {
     },
     {
       name: "sql_query",
-      description: "Execute a read-only SQL query against the People Analytics DuckDB database. Must always filter by the assigned team_id.",
+      description: "Execute a read-only SQL query against the People Analytics DuckDB database. Must always include the manager_chain RLS filter.",
       schema: z.object({
         sql: z.string().describe("The SQL SELECT query to execute."),
       }),
     }
   );
 
-  const systemPrompt = buildSystemPrompt(teamId, teamName);
-
   return createReactAgent({
     llm: model,
     tools: [sqlQueryTool],
-    prompt: systemPrompt,
+    prompt: buildSystemPrompt(userEmail, teamName),
   });
 }

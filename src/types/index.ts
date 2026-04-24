@@ -55,6 +55,7 @@ export interface TeamLeader {
   email: string;
   teamId: string;
   teamName: string;
+  role: "tl" | "director";
   avatarUrl?: string;
 }
 
@@ -63,14 +64,27 @@ export interface Employee {
   teamId: string;
   name: string;
   role: string;
+  roleLevel: number;
   department: string;
   email: string;
   hireDate: string;
   tenureMonths: number;
   salaryUsd: number;
   managerId: string | null;
+  managerChain: string;
   avatarUrl?: string;
   status: "active" | "on_leave" | "terminated";
+}
+
+export interface EmployeeMetrics {
+  presenceRate: number | null;   // 0–1
+  onTimeRate: number | null;     // 0–1
+  avgPerfScore: number | null;   // 0–100
+  totalOtHours: number | null;
+}
+
+export interface EmployeeWithMetrics extends Employee {
+  metrics: EmployeeMetrics;
 }
 
 export interface PerformanceRecord {
@@ -111,6 +125,7 @@ export interface TurnoverRecord {
   terminationDate: string;
   reason: "voluntary" | "involuntary" | "retirement";
   teamId: string;
+  managerChain: string;
 }
 
 export interface TeamAnalytics {

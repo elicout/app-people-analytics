@@ -8,8 +8,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session?.user) redirect("/login");
 
   const hc = await query<{ c: number }>(
-    "SELECT CAST(COUNT(*) AS INTEGER) as c FROM employees WHERE team_id=? AND status!='terminated'",
-    [session.user.teamId]
+    "SELECT CAST(COUNT(*) AS INTEGER) as c FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status!='terminated'",
+    [session.user.email!, session.user.email!]
   );
 
   return (
