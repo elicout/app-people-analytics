@@ -48,13 +48,10 @@ export default function KpiChartCard({ kpis, chartHeight = 200 }: Props) {
   const active = kpis.find((k) => k.id === activeId);
 
   return (
-    <div className="rounded-xl bg-white border border-slate-200 p-4 shadow-xs transition-shadow flex flex-col h-full">
+    <div className="rounded-4xl bg-white border border-slate-200 p-4 shadow-xs transition-shadow flex flex-col overflow-hidden">
 
       {/* KPI tabs */}
-      <div
-        className="grid gap-2"
-        style={{ gridTemplateColumns: `repeat(${kpis.length}, 1fr)` }}
-      >
+      <div className="flex divide-x divide-slate-100 border-b border-slate-100 -mx-4 -mt-4">
         {kpis.map((kpi) => {
           const isActive = kpi.id === activeId;
           const hasChart = Boolean(kpi.chart);
@@ -62,16 +59,16 @@ export default function KpiChartCard({ kpis, chartHeight = 200 }: Props) {
           const content = (
             <>
               <div className="flex items-start justify-between gap-1 mb-1">
-                <p className={`text-xs font-medium leading-tight =text-gray-500`}> {/*${isActive ? "text-blue-700" : "text-gray-500"}`}*/}
+                <p className="text-xs font-medium leading-tight text-gray-500">
                   {kpi.label}
                 </p>
                 {kpi.alert && <AlertBadge level={kpi.alert} />}
               </div>
-              <p className={`text-3xl font-bold leading-tight text-slate-900`}> {/*${isActive ? "text-blue-700" : "text-gray-500"}`}*/}
+              <p className="text-3xl font-bold leading-tight text-slate-900">
                 {kpi.formattedValue}
               </p>
               {hasChart && (
-                <p className={`mt-1 text-[10px] font-medium text-gray-400`}> {/*${isActive ? "text-blue-700" : "text-gray-500"}`}*/}
+                <p className={`mt-1 text-[10px] text-gray-400 ${isActive ? "font-bold" : "font-medium"}`}>
                   {isActive ? "▴ Visualizando" : "Histórico disponível"}
                 </p>
               )}
@@ -82,14 +79,14 @@ export default function KpiChartCard({ kpis, chartHeight = 200 }: Props) {
             <button
               key={kpi.id}
               onClick={() => setActiveId(kpi.id)}
-              className={`text-left rounded-lg p-3 transition-all ${
-                isActive ? "bg-white ring-2 ring-gray-100" : "hover:bg-gray-50"
+              className={`flex-1 text-left px-3 pt-7 pb-4 first:pl-4 last:pr-4 transition-all ${
+                isActive ? "bg-gray-50" : "hover:bg-gray-50"
               }`}
             >
               {content}
             </button>
           ) : (
-            <div key={kpi.id} className="rounded-lg p-3">
+            <div key={kpi.id} className="flex-1 px-3 pt-7 pb-4 first:pl-4 last:pr-4">
               {content}
             </div>
           );
@@ -98,8 +95,8 @@ export default function KpiChartCard({ kpis, chartHeight = 200 }: Props) {
 
       {/* Chart */}
       {active?.chart && (
-        <div className="flex-1 mt-4 px-4" style={{ minHeight: chartHeight }}>
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="mt-3 px-4" style={{ height: chartHeight }}>
+          <ResponsiveContainer key={activeId} width="100%" height="100%">
             <LineChart
               data={active.chart.data.map((d) => ({
                 value: d.value,

@@ -78,7 +78,7 @@ export default function AppShell({
   headcount = 0,
 }: AppShellProps) {
   const pathname = usePathname();
-  const [aiOpen, setAiOpen] = useState(false);
+  const [aiCollapsed, setAiCollapsed] = useState(true);
   const [expandedActive, setExpandedActive] = useState<Record<string, boolean>>({});
   const initials = getInitials(userName);
   const title = PAGE_TITLES[pathname] ?? "People Analytics";
@@ -107,7 +107,7 @@ export default function AppShell({
                     setExpandedActive((prev) => ({ ...prev, [page.href]: !prev[page.href] }));
                   }
                 }}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-gray-200 text-gray-900"
                     : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
@@ -185,6 +185,21 @@ export default function AppShell({
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <ul className="space-y-0.5 mb-0.5">
+            <li>
+              <button
+                onClick={() => setAiCollapsed((v) => !v)}
+                className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  !aiCollapsed
+                    ? "bg-gray-200 text-gray-900"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                }`}
+              >
+                <SparklesIcon className="h-4 w-4 shrink-0 text-purple-500" />
+                Assistente IA
+              </button>
+            </li>
+          </ul>
           {renderNav(NAV_ITEMS)}
         </nav>
         <hr className="mx-3 border-slate-200" />
@@ -202,36 +217,32 @@ export default function AppShell({
       </aside>
 
       {/* ── Main area ── */}
-      <div className="ml-64 flex min-h-screen flex-1 flex-col">
-        {/* Header */}
-        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur-sm">
-          <div className="flex items-center gap-4">
-            {isDetailPage && (
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
-              >
-                <ChevronLeftIcon className="h-4 w-4" />
-                Voltar
-              </Link>
-            )}
-            <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
-          </div>
-          <button
-            onClick={() => setAiOpen((v) => !v)}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-          >
-            <SparklesIcon className="h-4 w-4" />
-            Assistente IA
-          </button>
-        </header>
+      <div className="ml-64 flex flex-1 overflow-hidden">
+        {/* AI panel — sits right after the sidebar, pushes main content */}
+        <AiPanel collapsed={aiCollapsed} onToggle={() => setAiCollapsed((v) => !v)} teamId={teamId} />
 
-        {/* Page content */}
-        <main key={pathname} className="flex-1 overflow-y-auto animate-page-enter">{children}</main>
+        {/* Main column */}
+        <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+          {/* Header */}
+          <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur-sm">
+            <div className="flex items-center gap-4">
+              {isDetailPage && (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                  Voltar
+                </Link>
+              )}
+              <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
+            </div>
+          </header>
+
+          {/* Page content */}
+          <main key={pathname} className="flex-1 overflow-y-auto animate-page-enter">{children}</main>
+        </div>
       </div>
-
-      {/* AI panel */}
-      <AiPanel open={aiOpen} onClose={() => setAiOpen(false)} teamId={teamId} />
     </div>
   );
 }
