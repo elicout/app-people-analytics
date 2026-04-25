@@ -14,7 +14,7 @@ export default function KpiCard({ kpi }: { kpi: KpiSummary }) {
     : undefined;
 
   return (
-    <div className="rounded-xl bg-white border border-slate-200 p-6 shadow-xs">
+    <div className="rounded-4xl bg-white border border-slate-200 p-6 shadow-xs">
       <div className="mb-4 flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-gray-600">{kpi.label}</p>

@@ -8,7 +8,7 @@ interface DistributionBarProps {
 export default function DistributionBar({ title, items, total }: DistributionBarProps) {
   const max = Math.max(...items.map((i) => i.count), 1);
   return (
-    <div className="rounded-xl bg-gray-50 p-6 shadow-sx transition-shadow hover:shadow-sm">
+    <div className="rounded-4xl bg-gray-50 p-6 shadow-sx transition-shadow hover:shadow-sm">
       <p className="mb-4 text-sm font-medium text-slate-500">{title}</p>
       <div className="flex gap-2 items-end h-20">
         {items.map(({ label, sublabel, count, color }) => {

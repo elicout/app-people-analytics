@@ -42,7 +42,7 @@ function kpi(
 function MotivosCard({ items }: { items: Array<[string, number]>; span?: number | "fill" }) {
   const max = Math.max(...items.map(([, v]) => v), 1);
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-4xl border border-slate-200 bg-white p-6 shadow-xs">
       <p className="mb-10 text-sm font-medium text-slate-500">Principais Motivos de Desligamento</p>
       <div className="space-y-3">
         {items.map(([label, pct]) => (
@@ -339,23 +339,16 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-full bg-white py-6 space-y-8">
+    <div className="min-h-full py-6 space-y-8 max-w-5xl mx-auto">
 
       {/* ══════════ WORKFORCE PLANNING ══════════ */}
       <CollapsibleSection title="Workforce Planning" id="workforce">
-        <div className="grid grid-cols-4 gap-5">
-          {/* KpiChartCard — left side, spans 2 cols × 2 rows */}
-          <div style={{ gridColumn: "span 2", gridRow: "span 2" }} className="grid">
-            <KpiChartCard kpis={workforceChartKpis} chartHeight={200} />
-          </div>
-          {/* Right side row 1: Atividade + Presença */}
-          {workforceKpis.map((k) => (
-            <div key={k.id} className="grid"><KpiCard kpi={k} /></div>
-          ))}
-          {/* Right side row 2: Jornada SplitCard */}
-          <div style={{ gridColumn: "span 2" }} className="grid">
-            <SplitCard card={jornadaCard} />
-          </div>
+        <div className="space-y-5">
+          <KpiChartCard kpis={workforceChartKpis} chartHeight={200} />
+          <CardRow>
+            {workforceKpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
+          </CardRow>
+          <SplitCard card={jornadaCard} />
         </div>
       </CollapsibleSection>
 

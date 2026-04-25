@@ -8,7 +8,7 @@ interface Props {
 
 export default function SplitCard({ card }: Props) {
   return (
-    <div className="rounded-xl bg-white border border-slate-200 p-6 shadow-xs flex flex-col">
+    <div className="rounded-4xl bg-white border border-slate-200 p-6 shadow-xs flex flex-col">
       <p className="text-sm font-medium text-gray-600">{card.title}</p>
       <div className="flex flex-1 items-end mt-4">
         {card.items.map(({ label, value, showLabel = true, subtitle, sub, alert, tooltip }) => (

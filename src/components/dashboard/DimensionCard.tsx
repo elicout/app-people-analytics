@@ -8,7 +8,7 @@ interface Props {
 export default function DimensionCard({ title, items, height }: Props) {
   return (
     <div
-      className="rounded-xl bg-white border border-slate-200 p-6 shadow-xs"
+      className="rounded-4xl bg-white border border-slate-200 p-6 shadow-xs"
       style={height ? { height } : undefined}
     >
       <p className="mb-4 text-sm font-medium text-slate-500">{title}</p>

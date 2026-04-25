@@ -74,6 +74,13 @@ function validateScope(sql: string, userEmail: string): boolean {
 }
 
 export function createPeopleAnalyticsAgent(userEmail: string, teamName: string) {
+  // Internal B3 endpoint (requires api-key header, not Authorization: Bearer):
+  // const modelName = "gpt-4.1";
+  // configuration: {
+  //   baseURL: `https://api-b3gpt.b3.com.br/internal-api/b3gpt-llms/v1/openai/deployments/${modelName}`,
+  //   apiKey: process.env.OPENAI_API_KEY,
+  //   defaultHeaders: { "api-key": process.env.OPENAI_API_KEY },
+  // }
   const model = new ChatOpenAI({
     model: "gpt-4o-mini",
     temperature: 0,
