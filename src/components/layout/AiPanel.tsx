@@ -20,6 +20,7 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH);
+  const [mounted, setMounted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(0);
@@ -28,6 +29,8 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   void teamId;
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,7 +97,7 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
       className="shrink-0 h-full bg-white border-r border-gray-100 overflow-hidden"
       style={{
         width: totalWidth,
-        transition: isDragging ? "none" : "width 300ms ease-in-out",
+        transition: !mounted || isDragging ? "none" : "width 300ms ease-in-out",
       }}
     >
       <div className="h-full flex" style={{ width: STRIP_WIDTH + panelWidth }}>
@@ -117,7 +120,7 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
         </div>
 
         {/* ── Chat content ── */}
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden" style={{ display: collapsed ? "none" : undefined }}>
           {/* Header */}
           <div className="shrink-0 px-4 py-3 flex items-center gap-2">
             <p className="text-[14px] font-semibold text-gray-600">Assistente IA</p>
@@ -198,6 +201,7 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
         {/* Drag handle on the right edge */}
         <div
           className="w-1.5 shrink-0 cursor-col-resize group"
+          style={{ display: collapsed ? "none" : undefined }}
           onMouseDown={handleDragStart}
         >
           <div className="w-px h-full mx-auto bg-gray-100 group-hover:bg-blue-300 transition-colors" />
