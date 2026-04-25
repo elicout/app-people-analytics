@@ -54,3 +54,6 @@ docs/b3-peopleanalytics-main/
 # Claude Code skills — tooling, not application code
 .agents/
 skills-lock.json
+
+# Docs folder
+docs/
