@@ -4,6 +4,7 @@ import { RealProductivityRepository } from "./ProductivityRepository";
 import { RealOvertimeRepository } from "./OvertimeRepository";
 import { RealPerformanceRepository } from "./PerformanceRepository";
 import { RealTurnoverRepository } from "./TurnoverRepository";
+import { RealTimeBankRepository } from "./TimeBankRepository";
 import type { Repositories } from "../interfaces/types";
 
 export const realRepositories: Repositories = {
@@ -13,4 +14,5 @@ export const realRepositories: Repositories = {
   overtime:     new RealOvertimeRepository(),
   performance:  new RealPerformanceRepository(),
   turnover:     new RealTurnoverRepository(),
+  timeBank:     new RealTimeBankRepository(),
 };

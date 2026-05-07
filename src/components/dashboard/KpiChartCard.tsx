@@ -93,10 +93,10 @@ export default function KpiChartCard({ kpis, chartHeight = 200 }: Props) {
         })}
       </div>
 
-      {/* Chart */}
+      {/* Chart — height passed as number so calculatedHeight > 0 on first render, suppressing the -1 warning */}
       {active?.chart && (
-        <div className="mt-3 px-4" style={{ height: chartHeight }}>
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="mt-3 px-4">
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <LineChart key={activeId}
               data={active.chart.data.map((d) => ({
                 value: d.value,

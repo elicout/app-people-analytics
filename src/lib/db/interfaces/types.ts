@@ -17,6 +17,8 @@ export interface EmployeePresenceRow { employee_id: string; presence_rate: numbe
 export interface EmployeeOnTimeRow   { employee_id: string; on_time_rate: number }
 export interface EmployeeScoreRow    { employee_id: string; avg_score: number }
 export interface EmployeeOtRow       { employee_id: string; total_ot_hours: number }
+export interface TimeBankSummaryRow  { total_accrued: number; total_compensated: number; balance: number; balance_pct: number }
+export interface TimeBankEmployeeRow { employee_id: string; name: string; total_accrued: number; total_compensated: number; balance: number; balance_pct: number }
 
 // ── Repository interfaces ──────────────────────────────────────────────────────
 
@@ -65,6 +67,13 @@ export interface ITurnoverRepository {
   getMonthlyCount(userEmail: string): Promise<MonthCount[]>;
 }
 
+export interface ITimeBankRepository {
+  /** Aggregate BH totals across the team — drives the Jornada card summary. */
+  getSummary(userEmail: string): Promise<TimeBankSummaryRow>;
+  /** Per-employee BH breakdown — drives the Jornada nominal table. */
+  getPerEmployee(userEmail: string): Promise<TimeBankEmployeeRow[]>;
+}
+
 // ── Composite ─────────────────────────────────────────────────────────────────
 
 export interface Repositories {
@@ -74,4 +83,5 @@ export interface Repositories {
   overtime:     IOvertimeRepository;
   performance:  IPerformanceRepository;
   turnover:     ITurnoverRepository;
+  timeBank:     ITimeBankRepository;
 }

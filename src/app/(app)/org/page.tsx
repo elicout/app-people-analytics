@@ -12,22 +12,24 @@ export default async function OrgPage() {
   const tlRecords: TeamLeader[] = TEAM_LEADERS.filter(l => l.role === "tl");
   const currentUser = TEAM_LEADERS.find(l => l.teamId === session!.user.teamId)!;
 
-  const { employees, attendance, productivity, performance, overtime } = getRepositories();
+  const { employees, attendance, productivity, performance, overtime, timeBank } = getRepositories();
 
   // Employees visible to this user via RLS; exclude team-leadership records
   // (TLs appear as root nodes in the org tree, not as employee nodes)
-  const [empList, attRows, prodRows, perfRows, otRows] = await Promise.all([
+  const [empList, attRows, prodRows, perfRows, otRows, tbRows] = await Promise.all([
     employees.getForOrg(ue),
     attendance.getPerEmployee(ue),
     productivity.getPerEmployee(ue),
     performance.getPerEmployee(ue),
     overtime.getPerEmployee(ue),
+    timeBank.getPerEmployee(ue),
   ]);
 
   const attMap  = new Map(attRows.map(r  => [r.employee_id, r.presence_rate]));
   const prodMap = new Map(prodRows.map(r => [r.employee_id, r.on_time_rate]));
   const perfMap = new Map(perfRows.map(r => [r.employee_id, r.avg_score]));
   const otMap   = new Map(otRows.map(r   => [r.employee_id, r.total_ot_hours]));
+  const tbMap   = new Map(tbRows.map(r   => [r.employee_id, r.balance_pct]));
 
   const employeesWithMetrics: EmployeeWithMetrics[] = empList.map(e => ({
     id: e.id,
@@ -44,10 +46,11 @@ export default async function OrgPage() {
     managerChain: "",
     status: e.status as EmployeeWithMetrics["status"],
     metrics: {
-      presenceRate:  attMap.get(e.id)  != null ? Number(attMap.get(e.id))  : null,
+      presenceRate:  attMap.get(e.id) != null ? Number(attMap.get(e.id))  : null,
       onTimeRate:    prodMap.get(e.id) != null ? Number(prodMap.get(e.id)) : null,
       avgPerfScore:  perfMap.get(e.id) != null ? Number(perfMap.get(e.id)) : null,
       totalOtHours:  otMap.get(e.id)   != null ? Number(otMap.get(e.id))   : null,
+      bhCompPct:     tbMap.get(e.id)   != null ? Number(tbMap.get(e.id))   : null,
     },
   }));
 

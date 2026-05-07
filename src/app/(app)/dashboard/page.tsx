@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { getRepositories } from "@/lib/db";
 import { KpiSummary, KpiChartItem, SplitCardData, AlertLevel, TrendDirection } from "@/types";
 import { getAlertLevel, trendDir } from "@/lib/utils";
-import { TARGETS, GD_CONFIG, MOCK_RATIOS } from "@/lib/constants";
+import { TARGETS, GD_CONFIG, MOCK_RATIOS, KPI_RULES } from "@/lib/constants";
 import KpiGrid from "@/components/dashboard/KpiGrid";
 import CardGrid from "@/components/dashboard/CardGrid";
 import CardRow from "@/components/dashboard/CardRow";
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
   const session = await auth();
   const ue = session!.user.email!;  // user email — the RLS key
 
-  const { employees, attendance, productivity, overtime, performance, turnover } = getRepositories();
+  const { employees, attendance, productivity, performance, turnover, timeBank } = getRepositories();
 
   const [
     hc,
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
     monthlyHires,
     presence,
     activity,
-    otHours,
+    bhSummary,
     roleRows,
     tenureSplit,
     gdClusters,
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
     employees.getMonthlyHires(ue),
     attendance.getTeamRate(ue),
     productivity.getTeamOnTimeRate(ue),
-    overtime.getTotalHours(ue),
+    timeBank.getSummary(ue),
     employees.getRoleDistribution(ue),
     employees.getTenureSplit(ue),
     performance.getGdClusters(ue),
@@ -96,8 +96,9 @@ export default async function DashboardPage() {
   ]);
 
   // ── derived values ───────────────────────────────────────────────────────────
-  const bhComp     = Math.min(100, Math.round((1 - otHours / Math.max(otHours * 1.75, 1)) * 100));
-  const bhPending  = Math.round(otHours * 0.43);
+  const bhComp     = Math.round(bhSummary.balance_pct);
+  const bhPending  = bhSummary.balance;
+  const otHours    = bhSummary.total_accrued;
   const tvRate     = hc > 0 ? (tvCount / hc) * 100 : 0;
   const leaderT    = Math.round(tenureSplit.leader_tenure ?? 24);
   const nonLeaderT = Math.round(tenureSplit.nonleader_tenure ?? 13);
@@ -175,16 +176,16 @@ export default async function DashboardPage() {
   ];
 
   const workforceKpis: KpiSummary[] = [
-    kpi("atividade", "Atividade Digital", activity, `${activity.toFixed(1)}%`, "%", 1.2, "up", getAlertLevel(activity, TARGETS.ACTIVITY_PCT, true), true, 80),
-    kpi("presenca", "Presença no Escritório", presence, `${presence.toFixed(1)}%`, "%", -0.5, "down", getAlertLevel(presence, TARGETS.PRESENCE_PCT, true), true, TARGETS.PRESENCE_PCT),
+    kpi("atividade", "Atividade Digital", activity, `${activity.toFixed(1)}%`, "%", 1.2, "up", getAlertLevel(activity, KPI_RULES.activity), true, 80),
+    kpi("presenca", "Presença no Escritório", presence, `${presence.toFixed(1)}%`, "%", -0.5, "down", getAlertLevel(presence, KPI_RULES.presence), true, TARGETS.PRESENCE_PCT),
   ];
 
   const jornadaCard: SplitCardData = {
     title: "Jornada",
     items: [
-      { label: "Saldo Compensado", subtitle: "BH", value: `${bhComp}%`, sub: "compensado", showLabel: false, alert: getAlertLevel(bhComp, TARGETS.BH_COMPENSATED_PCT, true), tooltip: `Meta: ${TARGETS.BH_COMPENSATED_PCT}%` },
+      { label: "Saldo Compensado", subtitle: "BH", value: `${bhComp}%`, sub: "compensado", showLabel: false, alert: getAlertLevel(bhComp, KPI_RULES.bh_comp), tooltip: `Meta: ${TARGETS.BH_COMPENSATED_PCT}%` },
       { label: "Horas a Compensar", value: `${bhPending}h`, sub: "à compensar", showLabel: false },
-      { label: "Horas Extras Realizadas", subtitle: "HE", value: `${otHours}h`, sub: "realizadas", showLabel: false, alert: getAlertLevel(otHours, TARGETS.OVERTIME_HOURS, false), tooltip: `Meta: ${TARGETS.OVERTIME_HOURS}h` },
+      { label: "Horas Extras Realizadas", subtitle: "HE", value: `${otHours}h`, sub: "realizadas", showLabel: false },
     ],
   };
 
@@ -211,9 +212,9 @@ export default async function DashboardPage() {
   ];
 
   const turnoverKpis: KpiSummary[] = [
-    kpi("turnover-rate", "Turnover", tvRate, `${tvRate.toFixed(1)}%`, "%", -1, "down", getAlertLevel(tvRate, TARGETS.TURNOVER_RATE_PCT, false), false, TARGETS.TURNOVER_RATE_PCT),
-    kpi("desligamentos", "Desligamentos", tvCount, String(tvCount), "", -10, "down", getAlertLevel(tvCount, TARGETS.TURNOVER_COUNT, false), false),
-    kpi("regretted-rate", "Turnover Regretted", hc > 0 ? (regretted / hc) * 100 : 0, `${hc > 0 ? ((regretted / hc) * 100).toFixed(1) : 0}%`, "%", -1, "down", getAlertLevel(hc > 0 ? (regretted / hc) * 100 : 0, TARGETS.REGRETTED_RATE_PCT, false), false, TARGETS.REGRETTED_RATE_PCT),
+    kpi("turnover-rate", "Turnover", tvRate, `${tvRate.toFixed(1)}%`, "%", -1, "down", undefined, false, TARGETS.TURNOVER_RATE_PCT),
+    kpi("desligamentos", "Desligamentos", tvCount, String(tvCount), "", -10, "down", undefined, false),
+    kpi("regretted-rate", "Turnover Regretted", hc > 0 ? (regretted / hc) * 100 : 0, `${hc > 0 ? ((regretted / hc) * 100).toFixed(1) : 0}%`, "%", -1, "down", undefined, false, TARGETS.REGRETTED_RATE_PCT),
     kpi("deslig-regretted", "Desligamentos Regretted", regretted, String(regretted), "", 0, "stable", regretted > 3 ? "red" : "yellow", false),
   ];
 
