@@ -1,7 +1,8 @@
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/db/client";
+import { getRepositories } from "@/lib/db";
 import { KpiSummary, KpiChartItem, SplitCardData, AlertLevel, TrendDirection } from "@/types";
 import { getAlertLevel, trendDir } from "@/lib/utils";
+import { TARGETS, GD_CONFIG, MOCK_RATIOS } from "@/lib/constants";
 import KpiGrid from "@/components/dashboard/KpiGrid";
 import CardGrid from "@/components/dashboard/CardGrid";
 import CardRow from "@/components/dashboard/CardRow";
@@ -11,12 +12,6 @@ import DimensionCard from "@/components/dashboard/DimensionCard";
 import SplitCard from "@/components/dashboard/SplitCard";
 import KpiChartCard from "@/components/dashboard/KpiChartCard";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
-
-// ─── DB row types ─────────────────────────────────────────────────────────────
-interface N { value: number }
-interface MonthCount { month: string; count: number }
-interface ClusterRow { cluster: string; count: number }
-interface RoleRow { role: string; count: number }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function kpi(
@@ -67,137 +62,63 @@ function MotivosCard({ items }: { items: Array<[string, number]>; span?: number 
 export default async function DashboardPage() {
   const session = await auth();
   const ue = session!.user.email!;  // user email — the RLS key
-  const rp = [ue, ue];              // params for employee RLS: CONTAINS + self-exclusion
-  const tp = [ue];                  // params for turnover RLS: CONTAINS only
+
+  const { employees, attendance, productivity, overtime, performance, turnover } = getRepositories();
 
   const [
-    hcRows,
-    salaryRows,
+    hc,
+    salary,
     monthlyHires,
-    attendanceRow,
-    activityRow,
-    overtimeRow,
+    presence,
+    activity,
+    otHours,
     roleRows,
-    tenureRow,
-    gdRows,
-    highPerfRow,
-    turnoverCountRow,
+    tenureSplit,
+    gdClusters,
+    highPerf,
+    tvCount,
     monthlyTurnover,
     monthlyHC,
   ] = await Promise.all([
-    query<N>("SELECT CAST(COUNT(*) AS INTEGER) as value FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status!='terminated'", rp),
-    query<N>("SELECT ROUND(SUM(salary_usd), 0) as value FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status!='terminated'", rp),
-    query<MonthCount>(
-      `SELECT CAST(DATE_TRUNC('month', hire_date) AS VARCHAR) as month,
-              CAST(COUNT(*) AS INTEGER) as count
-       FROM employees WHERE CONTAINS(manager_chain,?) AND email!=?
-       GROUP BY DATE_TRUNC('month', hire_date) ORDER BY 1`,
-      rp
-    ),
-    query<{ rate: number }>(
-      `SELECT ROUND(100.0 * COUNT(CASE WHEN a.status='present' THEN 1 END) /
-              NULLIF(COUNT(*), 0), 1) as rate
-       FROM attendance a JOIN employees e ON e.id=a.employee_id
-       WHERE CONTAINS(e.manager_chain,?) AND e.email!=?`,
-      rp
-    ),
-    query<{ rate: number }>(
-      `SELECT ROUND(AVG(p.delivery_on_time_rate) * 100, 1) as rate
-       FROM productivity p JOIN employees e ON e.id=p.employee_id
-       WHERE CONTAINS(e.manager_chain,?) AND e.email!=?`,
-      rp
-    ),
-    query<{ ot_hours: number }>(
-      `SELECT CAST(SUM(o.overtime_hours) AS INTEGER) as ot_hours
-       FROM overtime o JOIN employees e ON e.id=o.employee_id
-       WHERE CONTAINS(e.manager_chain,?) AND e.email!=?`,
-      rp
-    ),
-    query<RoleRow>(
-      `SELECT role, CAST(COUNT(*) AS INTEGER) as count
-       FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status!='terminated'
-       GROUP BY role ORDER BY count DESC`,
-      rp
-    ),
-    query<{ leader_tenure: number; nonleader_tenure: number }>(
-      `SELECT
-         ROUND(AVG(CASE WHEN tenure_months > 24 THEN tenure_months END), 0) as leader_tenure,
-         ROUND(AVG(CASE WHEN tenure_months <= 24 THEN tenure_months END), 0) as nonleader_tenure
-       FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status!='terminated'`,
-      rp
-    ),
-    query<ClusterRow>(
-      `SELECT cluster, CAST(COUNT(*) AS INTEGER) as count FROM (
-         SELECT e.id,
-           CASE
-             WHEN AVG(p.score) >= 90 THEN 'CE'
-             WHEN AVG(p.score) >= 80 THEN 'FE'
-             WHEN AVG(p.score) >= 70 THEN 'CA'
-             WHEN AVG(p.score) >= 60 THEN 'PA'
-             ELSE 'NA'
-           END as cluster
-         FROM employees e LEFT JOIN performance p ON e.id=p.employee_id
-         WHERE CONTAINS(e.manager_chain,?) AND e.email!=? GROUP BY e.id
-       ) sub GROUP BY cluster
-       ORDER BY CASE cluster WHEN 'CE' THEN 1 WHEN 'FE' THEN 2 WHEN 'CA' THEN 3 WHEN 'PA' THEN 4 ELSE 5 END`,
-      rp
-    ),
-    query<N>(
-      `SELECT CAST(COUNT(*) AS INTEGER) as value FROM (
-         SELECT e.id FROM employees e JOIN performance p ON e.id=p.employee_id
-         WHERE CONTAINS(e.manager_chain,?) AND e.email!=? GROUP BY e.id HAVING AVG(p.score) >= 80
-       ) sub`,
-      rp
-    ),
-    query<N>("SELECT CAST(COUNT(*) AS INTEGER) as value FROM turnover WHERE CONTAINS(manager_chain,?)", tp),
-    query<MonthCount>(
-      `SELECT CAST(DATE_TRUNC('month', termination_date) AS VARCHAR) as month,
-              CAST(COUNT(*) AS INTEGER) as count
-       FROM turnover WHERE CONTAINS(manager_chain,?) GROUP BY 1 ORDER BY 1`,
-      tp
-    ),
-    query<MonthCount>(
-      `SELECT month, CAST(SUM(count) OVER (ORDER BY month) AS INTEGER) as count FROM (
-         SELECT CAST(DATE_TRUNC('month', hire_date) AS VARCHAR) as month,
-                CAST(COUNT(*) AS INTEGER) as count
-         FROM employees WHERE CONTAINS(manager_chain,?) AND email!=?
-         GROUP BY DATE_TRUNC('month', hire_date)
-       ) ORDER BY month`,
-      rp
-    ),
+    employees.getHeadcount(ue),
+    employees.getTotalSalary(ue),
+    employees.getMonthlyHires(ue),
+    attendance.getTeamRate(ue),
+    productivity.getTeamOnTimeRate(ue),
+    overtime.getTotalHours(ue),
+    employees.getRoleDistribution(ue),
+    employees.getTenureSplit(ue),
+    performance.getGdClusters(ue),
+    performance.getHighPerformersCount(ue),
+    turnover.getCount(ue),
+    turnover.getMonthlyCount(ue),
+    employees.getMonthlyHeadcountCumulative(ue),
   ]);
 
   // ── derived values ───────────────────────────────────────────────────────────
-  const hc         = hcRows[0]?.value ?? 0;
-  const salary     = salaryRows[0]?.value ?? 0;
-  const presence   = Number(attendanceRow[0]?.rate ?? 0);
-  const activity   = Number(activityRow[0]?.rate ?? 0);
-  const otHours    = overtimeRow[0]?.ot_hours ?? 0;
   const bhComp     = Math.min(100, Math.round((1 - otHours / Math.max(otHours * 1.75, 1)) * 100));
   const bhPending  = Math.round(otHours * 0.43);
-  const highPerf   = highPerfRow[0]?.value ?? 0;
-  const tvCount    = turnoverCountRow[0]?.value ?? 0;
   const tvRate     = hc > 0 ? (tvCount / hc) * 100 : 0;
-  const leaderT    = Math.round(tenureRow[0]?.leader_tenure ?? 24);
-  const nonLeaderT = Math.round(tenureRow[0]?.nonleader_tenure ?? 13);
-  const pcdCount   = Math.max(1, Math.round(hc * 0.05));
-  const maleCount  = Math.round(hc * 0.5);
-  const gepCount   = Math.max(1, Math.round(hc * 0.07));
-  const regretted  = Math.max(1, Math.round(tvCount * 0.5));
-  const posOpen    = Math.max(2, Math.round(hc * 0.04));
+  const leaderT    = Math.round(tenureSplit.leader_tenure ?? 24);
+  const nonLeaderT = Math.round(tenureSplit.nonleader_tenure ?? 13);
+  const pcdCount   = Math.max(1, Math.round(hc * MOCK_RATIOS.PCD_PCT));
+  const maleCount  = Math.round(hc * MOCK_RATIOS.MALE_PCT);
+  const gepCount   = Math.max(1, Math.round(hc * MOCK_RATIOS.GEP_PCT));
+  const regretted  = Math.max(1, Math.round(tvCount * MOCK_RATIOS.REGRETTED_PCT));
+  const posOpen    = Math.max(2, Math.round(hc * MOCK_RATIOS.OPEN_POS_PCT));
   const hireTrend  = monthlyHires.map((r) => r.count);
   const lastHires  = hireTrend[hireTrend.length - 1] ?? 0;
   const prevHires  = hireTrend[hireTrend.length - 2] ?? lastHires;
 
   // GD/GT cluster map
   const gdMap: Record<string, number> = {};
-  for (const r of gdRows) gdMap[r.cluster] = r.count;
+  for (const r of gdClusters) gdMap[r.cluster] = r.count;
   const gdTotal = Object.values(gdMap).reduce((a, b) => a + b, 0) || 1;
 
   const GD = ["NA", "PA", "CA", "FE", "CE"].map((k, i) => ({
     label: k,
     count: gdMap[k] ?? 0,
-    color: ["#1e40af", "#2563eb", "#3b82f6", "#60a5fa", "#bfdbfe"][i],
+    color: GD_CONFIG.COLORS[i]!,
   }));
 
   const GT = [
@@ -209,7 +130,7 @@ export default async function DashboardPage() {
   ].map(({ key, ...rest }, i) => ({
     ...rest,
     count: gdMap[key] ?? 0,
-    color: ["#1e40af", "#2563eb", "#3b82f6", "#60a5fa", "#bfdbfe"][i],
+    color: GD_CONFIG.COLORS[i]!,
   }));
 
   // ── KPI definitions ──────────────────────────────────────────────────────────
@@ -254,16 +175,16 @@ export default async function DashboardPage() {
   ];
 
   const workforceKpis: KpiSummary[] = [
-    kpi("atividade", "Atividade Digital", activity, `${activity.toFixed(1)}%`, "%", 1.2, "up", getAlertLevel(activity, 90, true), true, 80),
-    kpi("presenca", "Presença no Escritório", presence, `${presence.toFixed(1)}%`, "%", -0.5, "down", getAlertLevel(presence, 60, true), true, 60),
+    kpi("atividade", "Atividade Digital", activity, `${activity.toFixed(1)}%`, "%", 1.2, "up", getAlertLevel(activity, TARGETS.ACTIVITY_PCT, true), true, 80),
+    kpi("presenca", "Presença no Escritório", presence, `${presence.toFixed(1)}%`, "%", -0.5, "down", getAlertLevel(presence, TARGETS.PRESENCE_PCT, true), true, TARGETS.PRESENCE_PCT),
   ];
 
   const jornadaCard: SplitCardData = {
     title: "Jornada",
     items: [
-      { label: "Saldo Compensado", subtitle: "BH", value: `${bhComp}%`, sub: "compensado", showLabel: false, alert: getAlertLevel(bhComp, 80, true), tooltip: "Meta: 80%" },
+      { label: "Saldo Compensado", subtitle: "BH", value: `${bhComp}%`, sub: "compensado", showLabel: false, alert: getAlertLevel(bhComp, TARGETS.BH_COMPENSATED_PCT, true), tooltip: `Meta: ${TARGETS.BH_COMPENSATED_PCT}%` },
       { label: "Horas a Compensar", value: `${bhPending}h`, sub: "à compensar", showLabel: false },
-      { label: "Horas Extras Realizadas", subtitle: "HE", value: `${otHours}h`, sub: "realizadas", showLabel: false, alert: getAlertLevel(otHours, 100, false), tooltip: "Meta: 100h" },
+      { label: "Horas Extras Realizadas", subtitle: "HE", value: `${otHours}h`, sub: "realizadas", showLabel: false, alert: getAlertLevel(otHours, TARGETS.OVERTIME_HOURS, false), tooltip: `Meta: ${TARGETS.OVERTIME_HOURS}h` },
     ],
   };
 
@@ -286,13 +207,13 @@ export default async function DashboardPage() {
 
   const performanceKpis: KpiSummary[] = [
     kpi("gep", "GEP", gepCount, `${gepCount}`, "", 0, "stable", undefined, false),
-    kpi("gptw", "GPTW", 90, "90", "", 2, "up", undefined, true, 80),
+    kpi("gptw", "GPTW", 90, "90", "", 2, "up", undefined, true, TARGETS.GPTW_SCORE),
   ];
 
   const turnoverKpis: KpiSummary[] = [
-    kpi("turnover-rate", "Turnover", tvRate, `${tvRate.toFixed(1)}%`, "%", -1, "down", getAlertLevel(tvRate, 10, false), false, 10),
-    kpi("desligamentos", "Desligamentos", tvCount, String(tvCount), "", -10, "down", getAlertLevel(tvCount, 5, false), false),
-    kpi("regretted-rate", "Turnover Regretted", hc > 0 ? (regretted / hc) * 100 : 0, `${hc > 0 ? ((regretted / hc) * 100).toFixed(1) : 0}%`, "%", -1, "down", getAlertLevel(hc > 0 ? (regretted / hc) * 100 : 0, 5, false), false, 5),
+    kpi("turnover-rate", "Turnover", tvRate, `${tvRate.toFixed(1)}%`, "%", -1, "down", getAlertLevel(tvRate, TARGETS.TURNOVER_RATE_PCT, false), false, TARGETS.TURNOVER_RATE_PCT),
+    kpi("desligamentos", "Desligamentos", tvCount, String(tvCount), "", -10, "down", getAlertLevel(tvCount, TARGETS.TURNOVER_COUNT, false), false),
+    kpi("regretted-rate", "Turnover Regretted", hc > 0 ? (regretted / hc) * 100 : 0, `${hc > 0 ? ((regretted / hc) * 100).toFixed(1) : 0}%`, "%", -1, "down", getAlertLevel(hc > 0 ? (regretted / hc) * 100 : 0, TARGETS.REGRETTED_RATE_PCT, false), false, TARGETS.REGRETTED_RATE_PCT),
     kpi("deslig-regretted", "Desligamentos Regretted", regretted, String(regretted), "", 0, "stable", regretted > 3 ? "red" : "yellow", false),
   ];
 

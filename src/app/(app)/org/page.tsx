@@ -1,23 +1,8 @@
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/db/client";
+import { getRepositories } from "@/lib/db";
 import OrgFlow from "@/components/org/OrgFlow";
 import { TEAM_LEADERS } from "@/data/mock";
 import type { EmployeeWithMetrics, TeamLeader } from "@/types";
-
-interface EmpRow {
-  id: string;
-  team_id: string;
-  name: string;
-  role: string;
-  role_level: number;
-  department: string;
-  email: string;
-  hire_date: string;
-  tenure_months: number;
-  salary_usd: number;
-  manager_id: string | null;
-  status: string;
-}
 
 export default async function OrgPage() {
   const session = await auth();
@@ -27,50 +12,16 @@ export default async function OrgPage() {
   const tlRecords: TeamLeader[] = TEAM_LEADERS.filter(l => l.role === "tl");
   const currentUser = TEAM_LEADERS.find(l => l.teamId === session!.user.teamId)!;
 
+  const { employees, attendance, productivity, performance, overtime } = getRepositories();
+
   // Employees visible to this user via RLS; exclude team-leadership records
   // (TLs appear as root nodes in the org tree, not as employee nodes)
-  const rp = [ue, ue];
-
-  const [employees, attRows, prodRows, perfRows, otRows] = await Promise.all([
-    query<EmpRow>(
-      `SELECT id, team_id, name, role, role_level, department, email,
-       CAST(hire_date AS VARCHAR) AS hire_date, tenure_months, salary_usd, manager_id, status
-       FROM employees
-       WHERE CONTAINS(manager_chain,?) AND email!=? AND status != 'terminated'
-         AND team_id != 'team-leadership'
-       ORDER BY role_level, role`,
-      rp
-    ),
-    query<{ employee_id: string; presence_rate: number }>(
-      `SELECT a.employee_id,
-       ROUND(COUNT(CASE WHEN a.status='present' THEN 1 END) * 1.0 / NULLIF(COUNT(*),0), 3) AS presence_rate
-       FROM attendance a JOIN employees e ON e.id = a.employee_id
-       WHERE CONTAINS(e.manager_chain,?) AND e.email!=? AND e.team_id != 'team-leadership'
-       GROUP BY a.employee_id`,
-      rp
-    ),
-    query<{ employee_id: string; on_time_rate: number }>(
-      `SELECT p.employee_id, ROUND(AVG(p.delivery_on_time_rate), 3) AS on_time_rate
-       FROM productivity p JOIN employees e ON e.id = p.employee_id
-       WHERE CONTAINS(e.manager_chain,?) AND e.email!=? AND e.team_id != 'team-leadership'
-       GROUP BY p.employee_id`,
-      rp
-    ),
-    query<{ employee_id: string; avg_score: number }>(
-      `SELECT p.employee_id, ROUND(AVG(p.score), 1) AS avg_score
-       FROM performance p JOIN employees e ON e.id = p.employee_id
-       WHERE CONTAINS(e.manager_chain,?) AND e.email!=? AND e.team_id != 'team-leadership'
-       GROUP BY p.employee_id`,
-      rp
-    ),
-    query<{ employee_id: string; total_ot_hours: number }>(
-      `SELECT o.employee_id, SUM(o.overtime_hours) AS total_ot_hours
-       FROM overtime o JOIN employees e ON e.id = o.employee_id
-       WHERE CONTAINS(e.manager_chain,?) AND e.email!=? AND e.team_id != 'team-leadership'
-         AND o.period = (SELECT MAX(period) FROM overtime)
-       GROUP BY o.employee_id`,
-      rp
-    ),
+  const [empList, attRows, prodRows, perfRows, otRows] = await Promise.all([
+    employees.getForOrg(ue),
+    attendance.getPerEmployee(ue),
+    productivity.getPerEmployee(ue),
+    performance.getPerEmployee(ue),
+    overtime.getPerEmployee(ue),
   ]);
 
   const attMap  = new Map(attRows.map(r  => [r.employee_id, r.presence_rate]));
@@ -78,7 +29,7 @@ export default async function OrgPage() {
   const perfMap = new Map(perfRows.map(r => [r.employee_id, r.avg_score]));
   const otMap   = new Map(otRows.map(r   => [r.employee_id, r.total_ot_hours]));
 
-  const employeesWithMetrics: EmployeeWithMetrics[] = employees.map(e => ({
+  const employeesWithMetrics: EmployeeWithMetrics[] = empList.map(e => ({
     id: e.id,
     teamId: e.team_id,
     name: e.name,

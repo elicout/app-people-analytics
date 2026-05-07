@@ -1,34 +1,20 @@
 import { auth } from "@/lib/auth";
-import { query } from "@/lib/db/client";
-
-interface EmpRow {
-  id: string;
-  name: string;
-  role: string;
-  department: string;
-  email: string;
-  hire_date: string;
-  tenure_months: number;
-  salary_usd: number;
-  status: string;
-}
+import { getRepositories } from "@/lib/db";
+import type { EmployeeListRow } from "@/lib/db";
 
 export default async function EmployeesPage() {
   const session = await auth();
   const ue = session!.user.email!;
 
-  const employees = await query<EmpRow>(
-    `SELECT id, name, role, department, email, CAST(hire_date AS VARCHAR) as hire_date, tenure_months, salary_usd, status
-     FROM employees WHERE CONTAINS(manager_chain,?) AND email!=? AND status != 'terminated' ORDER BY name`,
-    [ue, ue]
-  );
+  const { employees } = getRepositories();
+  const employeeList = await employees.getList(ue);
 
   return (
     <div className="max-w-5xl mx-auto px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Employees</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{Number(employees.length)} team members</p>
+          <p className="text-sm text-gray-400 mt-0.5">{Number(employeeList.length)} team members</p>
         </div>
 
         {/* Download button — visual only for now */}
@@ -58,7 +44,7 @@ export default async function EmployeesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {employees.map((emp) => (
+            {employeeList.map((emp: EmployeeListRow) => (
               <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 font-medium text-gray-900">{emp.name}</td>
                 <td className="px-4 py-3 text-gray-600">{emp.role}</td>
