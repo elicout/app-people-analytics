@@ -76,6 +76,19 @@ tables:
       reason: One of 'voluntary', 'involuntary', 'retirement'.
       manager_chain: Same chain as in employees — use for RLS.
 
+  time_bank:
+    description: >
+      Monthly Banco de Horas (BH) records per employee. Tracks overtime hours credited to the
+      bank (hours_accrued) and compensatory time already taken (hours_compensated). Join with
+      employees and apply the standard manager_chain RLS filter. To compute the outstanding
+      balance use SUM(hours_accrued) - SUM(hours_compensated); for the compensation rate use
+      SUM(hours_compensated) / NULLIF(SUM(hours_accrued), 0) * 100.
+    columns:
+      employee_id: References employees.id.
+      period: Month in 'YYYY-MM' format.
+      hours_accrued: Overtime hours credited to the time bank this period.
+      hours_compensated: Hours taken as compensatory time off this period.
+
 metrics:
   attendance_rate:
     description: Percentage of working days an employee was present.

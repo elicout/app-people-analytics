@@ -6,6 +6,7 @@ import {
   PRODUCTIVITY_RECORDS,
   OVERTIME_RECORDS,
   TURNOVER_RECORDS,
+  TIME_BANK_RECORDS,
 } from "@/data/mock";
 
 export async function seedDatabase(db: Database): Promise<void> {
@@ -72,6 +73,14 @@ export async function seedDatabase(db: Database): Promise<void> {
       reason VARCHAR,
       manager_chain VARCHAR
     );
+
+    CREATE TABLE IF NOT EXISTS time_bank (
+      employee_id VARCHAR,
+      period VARCHAR,
+      hours_accrued DECIMAL(6,2),
+      hours_compensated DECIMAL(6,2),
+      PRIMARY KEY (employee_id, period)
+    );
   `);
 
   // Seed only if empty
@@ -128,6 +137,14 @@ export async function seedDatabase(db: Database): Promise<void> {
     await tvStmt.run(t.employeeId, t.teamId, t.terminationDate, t.reason, t.managerChain);
   }
   await tvStmt.finalize();
+
+  const tbStmt = await conn.prepare(
+    "INSERT INTO time_bank VALUES (?, ?, ?, ?)"
+  );
+  for (const tb of TIME_BANK_RECORDS) {
+    await tbStmt.run(tb.employeeId, tb.period, tb.hoursAccrued, tb.hoursCompensated);
+  }
+  await tbStmt.finalize();
 
   await conn.close();
 }

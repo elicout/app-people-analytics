@@ -6,6 +6,7 @@ import type {
   ProductivityRecord,
   OvertimeRecord,
   TurnoverRecord,
+  TimeBankRecord,
 } from "@/types";
 
 // ----- Team Leaders (mock logins) -----
@@ -146,6 +147,33 @@ export const OVERTIME_RECORDS: OvertimeRecord[] = EMPLOYEES.filter(emp => emp.st
     };
   })
 );
+
+// Fraction of accrued BH each employee has already compensated — varies by person.
+const BH_COMP_RATES: Record<string, number> = {
+  "emp-001": 0.70,  // Jordan Lee
+  "emp-002": 0.40,  // Aisha Patel
+  "emp-003": 0.85,  // Tom Nguyen
+  "emp-004": 0.20,  // Clara Osei (on leave — rarely compensates)
+  "emp-005": 0.60,  // Ben Walsh
+  "emp-006": 0.75,  // Nina Russo
+  "emp-007": 0.55,  // Sam Kim
+  "emp-008": 0.90,  // Diego Torres
+  "emp-009": 0.45,  // Mei Wong
+  "emp-010": 0.65,  // Liam Burke
+  "emp-011": 0.80,  // Fatima Al-Hassan
+  "emp-012": 0.35,  // Oscar Mendes
+  "emp-013": 0.50,  // Hana Suzuki
+};
+
+export const TIME_BANK_RECORDS: TimeBankRecord[] = OVERTIME_RECORDS.map((o) => {
+  const rate = BH_COMP_RATES[o.employeeId] ?? 0.5;
+  return {
+    employeeId: o.employeeId,
+    period: o.period,
+    hoursAccrued: o.overtimeHours,
+    hoursCompensated: Math.min(Math.round(o.overtimeHours * rate), o.overtimeHours),
+  };
+});
 
 export const TURNOVER_RECORDS: TurnoverRecord[] = [
   { employeeId: "emp-ex-001", teamId: "team-alpha", terminationDate: "2024-02-15", reason: "voluntary",   managerChain: "sarah.chen@company.com,ana.sousa@company.com" },

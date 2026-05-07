@@ -1,11 +1,20 @@
-/** Alert level thresholds used by getAlertLevel() in utils.ts. */
-export const ALERT = {
-  GREEN_RATIO:        0.95,
-  YELLOW_RATIO:       0.80,
-  LOWER_GREEN_RATIO:  1.05,
-  LOWER_YELLOW_RATIO: 1.20,
-  TREND_STABLE_DELTA: 0.1,
-} as const;
+/** Minimum delta for trendDir() to consider a change non-stable. */
+export const TREND_STABLE_DELTA = 0.1 as const;
+
+/** Explicit alert thresholds per KPI. Add an entry here when a KPI gets defined rules.
+ *  Thresholds are absolute values (not ratios). For higherIsBetter KPIs: red < yellow < green.
+ *  For lowerIsBetter: green < yellow < red. */
+export interface KpiRule {
+  higherIsBetter: boolean;
+  yellow: number;
+  red: number;
+}
+
+export const KPI_RULES = {
+  presence: { higherIsBetter: true, yellow: 60, red: 50 },
+  activity: { higherIsBetter: true, yellow: 80, red: 70 },
+  bh_comp:  { higherIsBetter: true, yellow: 80, red: 70 },
+} as const satisfies Record<string, KpiRule>;
 
 /** KPI target values. Shared between dashboard, org chart, and AI agent context. */
 export const TARGETS = {

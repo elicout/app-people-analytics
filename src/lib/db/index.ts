@@ -11,4 +11,6 @@ export type {
   EmployeeOnTimeRow,
   EmployeeScoreRow,
   EmployeeOtRow,
+  TimeBankSummaryRow,
+  TimeBankEmployeeRow,
 } from "./interfaces/types";

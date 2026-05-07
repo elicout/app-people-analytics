@@ -77,7 +77,7 @@ export class MockEmployeeRepository implements IEmployeeRepository {
               CAST(hire_date AS VARCHAR) as hire_date, tenure_months, salary_usd, status
        FROM employees
        WHERE CONTAINS(manager_chain,?) AND email!=? AND status != 'terminated'
-       ORDER BY name`,
+       ORDER BY CASE WHEN status = 'open' THEN 1 ELSE 0 END, name`,
       rp
     );
   }

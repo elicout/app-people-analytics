@@ -1,20 +1,23 @@
 import { auth } from "@/lib/auth";
 import { getRepositories } from "@/lib/db";
-import type { EmployeeListRow } from "@/lib/db";
+import EmployeesTable from "@/components/employees/EmployeesTable";
 
 export default async function EmployeesPage() {
   const session = await auth();
   const ue = session!.user.email!;
 
-  const { employees } = getRepositories();
-  const employeeList = await employees.getList(ue);
+  const { employees, timeBank } = getRepositories();
+  const [employeeList, timeBankRows] = await Promise.all([
+    employees.getList(ue),
+    timeBank.getPerEmployee(ue),
+  ]);
 
   return (
     <div className="max-w-5xl mx-auto px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Employees</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{Number(employeeList.length)} team members</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Colaboradores</h1>
+          <p className="text-sm text-gray-400 mt-0.5">{employeeList.length} membros na equipa</p>
         </div>
 
         {/* Download button — visual only for now */}
@@ -32,39 +35,7 @@ export default async function EmployeesPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100">
-              {["Name", "Role", "Department", "Email", "Hire Date", "Tenure", "Salary / mo", "Status"].map((h) => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {employeeList.map((emp: EmployeeListRow) => (
-              <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 font-medium text-gray-900">{emp.name}</td>
-                <td className="px-4 py-3 text-gray-600">{emp.role}</td>
-                <td className="px-4 py-3 text-gray-500">{emp.department}</td>
-                <td className="px-4 py-3 text-gray-500">{emp.email}</td>
-                <td className="px-4 py-3 text-gray-500">{String(emp.hire_date).slice(0, 10)}</td>
-                <td className="px-4 py-3 text-gray-500">{emp.tenure_months}mo</td>
-                <td className="px-4 py-3 text-gray-600">${Number(emp.salary_usd).toLocaleString()}</td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    emp.status === "active" ? "bg-green-50 text-green-600" : "bg-yellow-50 text-yellow-600"
-                  }`}>
-                    {emp.status.replace("_", " ")}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <EmployeesTable employees={employeeList} timeBankRows={timeBankRows} />
     </div>
   );
 }

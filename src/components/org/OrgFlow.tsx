@@ -6,29 +6,28 @@ import "@xyflow/react/dist/style.css";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, RectangleStackIcon } from "@heroicons/react/24/solid";
 import { TLNode, EmployeeNode, OpenPositionNode, type TLNodeData, type EmpNodeData } from "./OrgNode";
 import { getAlertLevel } from "@/lib/utils";
-import { TARGETS } from "@/lib/constants";
+import { KPI_RULES, TARGETS, type KpiRule } from "@/lib/constants";
 import type { AlertLevel, EmployeeWithMetrics, TeamLeader } from "@/types";
 
-type MetricKey = "presence" | "onTime" | "performance" | "overtime";
+type MetricKey = "presence" | "onTime" | "bh_comp";
 
 const METRIC_CONFIG: Record<MetricKey, {
   label: string;
   getValue: (m: EmployeeWithMetrics["metrics"]) => number | null;
   format: (v: number) => string;
-  target: number;
-  higherIsBetter: boolean;
+  rule: KpiRule | undefined;
+  target: number | undefined;
 }> = {
-  presence:    { label: "Presença",         getValue: m => m.presenceRate  !== null ? m.presenceRate  * 100 : null, format: v => `${Math.round(v)}%`,  target: TARGETS.PRESENCE_PCT,     higherIsBetter: true  },
-  onTime:      { label: "Atividade Digital", getValue: m => m.onTimeRate    !== null ? m.onTimeRate    * 100 : null, format: v => `${Math.round(v)}%`,  target: TARGETS.ON_TIME_PCT,      higherIsBetter: true  },
-  performance: { label: "Performance",      getValue: m => m.avgPerfScore,                                           format: v => `${Math.round(v)}`,   target: TARGETS.PERFORMANCE_SCORE, higherIsBetter: true  },
-  overtime:    { label: "Horas Extras",     getValue: m => m.totalOtHours,                                          format: v => `${Math.round(v)}h`,  target: TARGETS.OVERTIME_HOURS,   higherIsBetter: false },
+  presence: { label: "Presença",         getValue: m => m.presenceRate !== null ? m.presenceRate * 100 : null, format: v => `${Math.round(v)}%`, rule: KPI_RULES.presence, target: TARGETS.PRESENCE_PCT     },
+  onTime:   { label: "Atividade Digital", getValue: m => m.onTimeRate   !== null ? m.onTimeRate   * 100 : null, format: v => `${Math.round(v)}%`, rule: KPI_RULES.activity, target: undefined                 },
+  bh_comp:  { label: "BH Compensado",    getValue: m => m.bhCompPct,                                           format: v => `${Math.round(v)}%`, rule: KPI_RULES.bh_comp,  target: TARGETS.BH_COMPENSATED_PCT },
 };
 
 function initials(name: string) {
   return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
-function alertOrder(level: AlertLevel | null): number {
+function alertOrder(level: AlertLevel | null | undefined): number {
   if (level === "red")    return 0;
   if (level === "yellow") return 1;
   if (level === "green")  return 2;
@@ -126,7 +125,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
       for (const emp of employees.filter(e => e.status !== "open")) {
         const val = cfg.getValue(emp.metrics);
         if (val !== null) {
-          const level = getAlertLevel(val, cfg.target, cfg.higherIsBetter);
+          const level = getAlertLevel(val, cfg.rule);
           if (level === "yellow") hasWarning = true;
           if (level === "red") hasCritical = true;
         }
@@ -243,15 +242,15 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
           if (filterOpen && !isOpen) continue;
 
           // Open positions are never metric-coloured
-          const alertLevel: AlertLevel | null = (selectedMetric && !isOpen)
+          const alertLevel: AlertLevel | null | undefined = (selectedMetric && !isOpen)
             ? (() => {
                 const cfg = METRIC_CONFIG[selectedMetric];
                 const val = cfg.getValue(emp.metrics);
-                return val !== null ? getAlertLevel(val, cfg.target, cfg.higherIsBetter) : null;
+                return val !== null ? getAlertLevel(val, cfg.rule) : null;
               })()
             : null;
 
-          if (filterLevels.size > 0 && (alertLevel === null || !filterLevels.has(alertLevel))) continue;
+          if (filterLevels.size > 0 && (alertLevel == null || !filterLevels.has(alertLevel))) continue;
 
           nextNodes.push({
             id: emp.id,
@@ -489,10 +488,10 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
                       .filter(e => e.teamId === tl.teamId && e.status !== "open")
                       .map(emp => {
                         const val = cfg.getValue(emp.metrics);
-                        const level = val !== null ? getAlertLevel(val, cfg.target, cfg.higherIsBetter) : null;
+                        const level = val !== null ? getAlertLevel(val, cfg.rule) : null;
                         return { emp, val, level };
                       })
-                      .filter(({ level }) => filterLevels.size === 0 || (level !== null && filterLevels.has(level)))
+                      .filter(({ level }) => filterLevels.size === 0 || (level != null && filterLevels.has(level)))
                       .sort((a, b) => alertOrder(a.level) - alertOrder(b.level));
 
                     if (teamEmps.length === 0) return null;
@@ -512,7 +511,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
                             level === "green"  ? "bg-emerald-50 text-emerald-700" :
                                                  "bg-gray-50 text-gray-400";
 
-                          const delta = val !== null ? Math.round(val - cfg.target) : null;
+                          const delta = (val !== null && cfg.target !== undefined) ? Math.round(val - cfg.target) : null;
                           const deltaStr = delta === null ? null
                             : delta === 0 ? cfg.format(0)
                             : (delta > 0 ? "+" : "−") + cfg.format(Math.abs(delta));
@@ -529,10 +528,14 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
                                 <p className="text-[11px] text-gray-400 truncate">{emp.role}</p>
                               </div>
                               <div className="shrink-0 flex items-baseline gap-1">
-                                {/* meta — no pill, plain gray */}
-                                <span className="text-[9px] font-medium text-gray-400">meta</span>
-                                <span className="text-[11px] font-semibold text-gray-500 tabular-nums">{cfg.format(cfg.target)}</span>
-                                <span className="text-gray-200 text-[11px] select-none">|</span>
+                                {/* meta — only shown when a target is defined for this metric */}
+                                {cfg.target !== undefined && (
+                                  <>
+                                    <span className="text-[9px] font-medium text-gray-400">meta</span>
+                                    <span className="text-[11px] font-semibold text-gray-500 tabular-nums">{cfg.format(cfg.target)}</span>
+                                    <span className="text-gray-200 text-[11px] select-none">|</span>
+                                  </>
+                                )}
                                 {/* real — label outside, colored pill for value */}
                                 <span className="text-[9px] font-medium text-gray-400">real</span>
                                 <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full tabular-nums ${badgeClass}`}>

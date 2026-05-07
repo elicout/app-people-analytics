@@ -81,6 +81,7 @@ export interface EmployeeMetrics {
   onTimeRate: number | null;     // 0–1
   avgPerfScore: number | null;   // 0–100
   totalOtHours: number | null;
+  bhCompPct: number | null;      // 0–100, from time_bank
 }
 
 export interface EmployeeWithMetrics extends Employee {
@@ -126,6 +127,13 @@ export interface TurnoverRecord {
   reason: "voluntary" | "involuntary" | "retirement";
   teamId: string;
   managerChain: string;
+}
+
+export interface TimeBankRecord {
+  employeeId: string;
+  period: string; // "YYYY-MM"
+  hoursAccrued: number;      // overtime hours credited to the bank
+  hoursCompensated: number;  // hours taken as compensatory time off
 }
 
 export interface TeamAnalytics {

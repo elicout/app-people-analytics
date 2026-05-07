@@ -1,26 +1,24 @@
 import { AlertLevel, TrendDirection } from "@/types";
-import { ALERT } from "@/lib/constants";
+import { TREND_STABLE_DELTA, type KpiRule } from "@/lib/constants";
 
 export function trendDir(current: number, previous: number): TrendDirection {
   const diff = current - previous;
-  if (Math.abs(diff) < ALERT.TREND_STABLE_DELTA) return "stable";
+  if (Math.abs(diff) < TREND_STABLE_DELTA) return "stable";
   return diff > 0 ? "up" : "down";
 }
 
-export function getAlertLevel(
-  value: number,
-  target: number,
-  higherIsBetter: boolean
-): AlertLevel {
-  const ratio = value / target;
-  if (higherIsBetter) {
-    if (ratio >= ALERT.GREEN_RATIO) return "green";
-    if (ratio >= ALERT.YELLOW_RATIO) return "yellow";
-    return "red";
+/** Returns the alert level for a value given an explicit KPI rule.
+ *  Returns undefined when no rule is provided — callers should treat that as "no alert". */
+export function getAlertLevel(value: number, rule: KpiRule | undefined): AlertLevel | undefined {
+  if (!rule) return undefined;
+  if (rule.higherIsBetter) {
+    if (value < rule.red)    return "red";
+    if (value < rule.yellow) return "yellow";
+    return "green";
   }
-  if (ratio <= ALERT.LOWER_GREEN_RATIO) return "green";
-  if (ratio <= ALERT.LOWER_YELLOW_RATIO) return "yellow";
-  return "red";
+  if (value > rule.red)    return "red";
+  if (value > rule.yellow) return "yellow";
+  return "green";
 }
 
 export function alertColorClasses(alert: AlertLevel) {
