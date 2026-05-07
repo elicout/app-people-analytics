@@ -96,8 +96,8 @@ export default function KpiChartCard({ kpis, chartHeight = 200 }: Props) {
       {/* Chart */}
       {active?.chart && (
         <div className="mt-3 px-4" style={{ height: chartHeight }}>
-          <ResponsiveContainer key={activeId} width="100%" height="100%">
-            <LineChart
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart key={activeId}
               data={active.chart.data.map((d) => ({
                 value: d.value,
                 label: formatMonth(d.month),
@@ -124,7 +124,7 @@ export default function KpiChartCard({ kpis, chartHeight = 200 }: Props) {
                 //stroke={active.chart.color ?? "#1d4ed8"}
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: 4, strokeWidth: 0, fill: active.chart.color ?? "#1d4ed8" }}
+                activeDot={{ r: 4, strokeWidth: 0, fill: active.chart.color ?? "#000000" }}
                 isAnimationActive
               />
             </LineChart>

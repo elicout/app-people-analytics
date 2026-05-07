@@ -6,6 +6,7 @@ import "@xyflow/react/dist/style.css";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, RectangleStackIcon } from "@heroicons/react/24/solid";
 import { TLNode, EmployeeNode, OpenPositionNode, type TLNodeData, type EmpNodeData } from "./OrgNode";
 import { getAlertLevel } from "@/lib/utils";
+import { TARGETS } from "@/lib/constants";
 import type { AlertLevel, EmployeeWithMetrics, TeamLeader } from "@/types";
 
 type MetricKey = "presence" | "onTime" | "performance" | "overtime";
@@ -17,10 +18,10 @@ const METRIC_CONFIG: Record<MetricKey, {
   target: number;
   higherIsBetter: boolean;
 }> = {
-  presence:    { label: "Presença",         getValue: m => m.presenceRate  !== null ? m.presenceRate  * 100 : null, format: v => `${Math.round(v)}%`,  target: 60,  higherIsBetter: true  },
-  onTime:      { label: "Atividade Digital", getValue: m => m.onTimeRate    !== null ? m.onTimeRate    * 100 : null, format: v => `${Math.round(v)}%`,  target: 60,  higherIsBetter: true  },
-  performance: { label: "Performance",      getValue: m => m.avgPerfScore,                                           format: v => `${Math.round(v)}`,   target: 80,  higherIsBetter: true  },
-  overtime:    { label: "Horas Extras",     getValue: m => m.totalOtHours,                                          format: v => `${Math.round(v)}h`,  target: 100, higherIsBetter: false },
+  presence:    { label: "Presença",         getValue: m => m.presenceRate  !== null ? m.presenceRate  * 100 : null, format: v => `${Math.round(v)}%`,  target: TARGETS.PRESENCE_PCT,     higherIsBetter: true  },
+  onTime:      { label: "Atividade Digital", getValue: m => m.onTimeRate    !== null ? m.onTimeRate    * 100 : null, format: v => `${Math.round(v)}%`,  target: TARGETS.ON_TIME_PCT,      higherIsBetter: true  },
+  performance: { label: "Performance",      getValue: m => m.avgPerfScore,                                           format: v => `${Math.round(v)}`,   target: TARGETS.PERFORMANCE_SCORE, higherIsBetter: true  },
+  overtime:    { label: "Horas Extras",     getValue: m => m.totalOtHours,                                          format: v => `${Math.round(v)}h`,  target: TARGETS.OVERTIME_HOURS,   higherIsBetter: false },
 };
 
 function initials(name: string) {

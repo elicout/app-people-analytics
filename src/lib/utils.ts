@@ -1,8 +1,9 @@
 import { AlertLevel, TrendDirection } from "@/types";
+import { ALERT } from "@/lib/constants";
 
 export function trendDir(current: number, previous: number): TrendDirection {
   const diff = current - previous;
-  if (Math.abs(diff) < 0.1) return "stable";
+  if (Math.abs(diff) < ALERT.TREND_STABLE_DELTA) return "stable";
   return diff > 0 ? "up" : "down";
 }
 
@@ -13,12 +14,12 @@ export function getAlertLevel(
 ): AlertLevel {
   const ratio = value / target;
   if (higherIsBetter) {
-    if (ratio >= 0.95) return "green";
-    if (ratio >= 0.8) return "yellow";
+    if (ratio >= ALERT.GREEN_RATIO) return "green";
+    if (ratio >= ALERT.YELLOW_RATIO) return "yellow";
     return "red";
   }
-  if (ratio <= 1.05) return "green";
-  if (ratio <= 1.2) return "yellow";
+  if (ratio <= ALERT.LOWER_GREEN_RATIO) return "green";
+  if (ratio <= ALERT.LOWER_YELLOW_RATIO) return "yellow";
   return "red";
 }
 
