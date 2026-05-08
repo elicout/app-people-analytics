@@ -57,3 +57,6 @@ skills-lock.json
 
 # Docs folder
 docs/
+
+# Sample env
+!.env.example

@@ -246,7 +246,7 @@ Create `.env.local` in the project root. All variables below are required in dev
 
 **Missing required variables must throw with a clear error at startup**, not silently fail at request time. Add startup validation in `src/lib/ai/agent.ts` (already implicitly fails) and in the future `factory.ts`.
 
-**Never commit `.env.local`.** It is already in `.gitignore`. `AUTH_SECRET="lucas"` and a live `OPENAI_API_KEY` are currently in that file — rotate both before any non-local use.
+**Never commit `.env.local`.** It is already in `.gitignore`. `AUTH_SECRET` and a live `OPENAI_API_KEY` are currently in that file — rotate both before any non-local use.
 
 ---
 
