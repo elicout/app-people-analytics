@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# People Analytics
 
-## Getting Started
+A People Analytics platform for Team Leaders. Each TL logs in and sees their own team's workforce metrics — performance, attendance, overtime, turnover, and an org chart — plus an AI assistant that answers natural-language questions about the team by querying a local DuckDB database.
 
-First, run the development server:
+**Current state:** local development with fully mocked data (in-memory DuckDB, seeded employees). No real HR system connection yet.
+
+---
+
+## Stack
+
+- **Next.js 16** (App Router, webpack — Turbopack is disabled; see note below)
+- **DuckDB** — in-memory SQL database, seeded on first boot
+- **NextAuth v5** — credentials auth today; AAD SSO target
+- **LangChain / LangGraph** — AI agent with a `sql_query` tool
+- **Recharts** — dashboard charts
+- **React Flow** — org chart
+- **Tailwind CSS 4**
+
+---
+
+## Getting started
+
+### 1. Clone and install
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url>
+cd app_people_analytics
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open `.env.local` and fill in:
 
-## Learn More
+| Variable | Description |
+|---|---|
+| `AUTH_SECRET` | Random secret for NextAuth JWTs — generate with `openssl rand -base64 32` |
+| `AUTH_TRUST_HOST` | Set to `true` for local HTTP dev |
+| `OPENAI_API_KEY` | OpenAI key for the AI chat assistant (gpt-4o-mini) |
 
-To learn more about Next.js, take a look at the following resources:
+`OPENAI_API_KEY` is optional to get the app running — everything except the AI panel works without it.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 3. Run the dev server
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run dev -- --webpack
+```
 
-## Deploy on Vercel
+> **The `--webpack` flag is required.** DuckDB is a native Node module that is incompatible with Turbopack. Running without the flag will fail.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open [http://localhost:3000](http://localhost:3000).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Mock login credentials
+
+All accounts use the password **`password123`**.
+
+| Email | Team | Role |
+|---|---|---|
+| `sarah.chen@company.com` | Alpha Squad | Team Leader |
+| `marcus.rivera@company.com` | Beta Force | Team Leader |
+| `priya.nair@company.com` | Gamma Unit | Team Leader |
+| `ana.sousa@company.com` | — | Director (sees all teams) |
+
+---
+
+## Other commands
+
+```bash
+npm run build    # Production build (webpack, no --turbopack)
+npm run lint     # ESLint
+```
