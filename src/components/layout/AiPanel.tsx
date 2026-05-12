@@ -5,9 +5,9 @@ import { ChevronRightIcon, SparklesIcon } from "@heroicons/react/24/solid";
 import type { ChatMessage } from "@/types";
 
 const STRIP_WIDTH = 36;
-const DEFAULT_WIDTH = 300;
 const MIN_WIDTH = 350;
 const MAX_WIDTH = 520;
+const DEFAULT_WIDTH = MIN_WIDTH;
 
 interface AiPanelProps {
   collapsed: boolean;
@@ -94,7 +94,7 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
 
   return (
     <div
-      className="shrink-0 h-full bg-white border-r border-gray-100 overflow-hidden"
+      className="shrink-0 h-full bg-white border-r border-slate-200 overflow-hidden"
       style={{
         width: totalWidth,
         transition: !mounted || isDragging ? "none" : "width 300ms ease-in-out",
@@ -104,7 +104,7 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
 
         {/* ── Permanent left strip ── */}
         <div
-          className="shrink-0 h-full flex flex-col items-center pt-3 gap-1.5 border-r border-gray-100"
+          className={`shrink-0 h-full flex flex-col items-center pt-3 gap-1.5 border-r ${collapsed ? "border-transparent" : "border-slate-200"}`}
           style={{ width: STRIP_WIDTH }}
         >
           <SparklesIcon className="w-4 h-4 text-purple-500" />
@@ -204,7 +204,7 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
           style={{ display: collapsed ? "none" : undefined }}
           onMouseDown={handleDragStart}
         >
-          <div className="w-px h-full mx-auto bg-gray-100 group-hover:bg-blue-300 transition-colors" />
+          <div className="w-px h-full mx-auto group-hover:bg-gray-300 transition-colors" />
         </div>
 
       </div>

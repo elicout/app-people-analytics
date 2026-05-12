@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ReactFlow, Controls, Background, BackgroundVariant, Panel, useNodesState, useEdgesState, type Node, type Edge } from "@xyflow/react";
+import { ReactFlow, Controls, Background, BackgroundVariant, Panel, useNodesState, useEdgesState, useReactFlow, type Node, type Edge } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, RectangleStackIcon } from "@heroicons/react/24/solid";
 import { TLNode, EmployeeNode, OpenPositionNode, type TLNodeData, type EmpNodeData } from "./OrgNode";
@@ -49,6 +49,24 @@ const PANEL_KPIS: PanelKpi[] = [
   { id: "posicoes",  label: "Posições Abertas", getValue: emps => emps.filter(e => e.status === "open").length, filterable: true },
 ];
 
+function ViewportAdjuster({ panelOpen, panelWidth }: { panelOpen: boolean; panelWidth: number }) {
+  const { getViewport, setViewport } = useReactFlow();
+  const prevOpen = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (prevOpen.current === panelOpen) return;
+    const isFirstRender = prevOpen.current === null;
+    prevOpen.current = panelOpen;
+    if (isFirstRender) return;
+
+    const { x, y, zoom } = getViewport();
+    const shift = (panelWidth + 12) / 2;
+    setViewport({ x: panelOpen ? x - shift : x + shift, y, zoom }, { duration: 300 });
+  }, [panelOpen, panelWidth, getViewport, setViewport]);
+
+  return null;
+}
+
 // Must be defined outside the component to avoid re-registration on every render
 const nodeTypes = {
   tl: TLNode,
@@ -67,45 +85,17 @@ interface OrgFlowProps {
 }
 
 const COLLAPSE_MS = 200;
+const PANEL_WIDTH = 420;
 
 export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowProps) {
   const [selectedMetric, setSelectedMetric] = useState<MetricKey | null>(null);
   const [filterLevels, setFilterLevels] = useState<Set<AlertLevel>>(new Set());
   const [filterOpen, setFilterOpen] = useState(false);
-  const [visibleKpis, setVisibleKpis] = useState<Set<string>>(new Set(PANEL_KPIS.map(k => k.id)));
+  const [visibleKpis, setVisibleKpis] = useState<Set<string>>(new Set());
   const [kpiMenuOpen, setKpiMenuOpen] = useState(false);
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set());
 
-  // Side panel resize + collapse
-  const [panelWidth, setPanelWidth] = useState(256);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartX = useRef(0);
-  const dragStartWidth = useRef(0);
-  const panelWidthRef = useRef(256);
-  panelWidthRef.current = panelWidth;
-
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    dragStartX.current = e.clientX;
-    dragStartWidth.current = panelWidthRef.current;
-    setIsDragging(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isDragging) return;
-    const onMove = (e: MouseEvent) => {
-      const delta = dragStartX.current - e.clientX;
-      setPanelWidth(Math.min(420, Math.max(180, dragStartWidth.current + delta)));
-    };
-    const onUp = () => setIsDragging(false);
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [isDragging]);
 
   const handleToggleFilterOpen = () => {
     setFilterOpen(prev => {
@@ -299,7 +289,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
                 const next = selectedMetric === key ? null : key;
                 setSelectedMetric(next);
                 setFilterLevels(new Set());
-                if (next !== null) setPanelCollapsed(true);
+                if (next !== null) setPanelCollapsed(false);
               }}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 isSelected
@@ -354,7 +344,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
       {/* Canvas + side panel */}
       <div className="flex-1 min-h-0 flex">
         {/* React Flow canvas */}
-        <div className="flex-1 min-w-0 rounded-xl border border-gray-100 overflow-hidden">
+        <div className="flex-1 min-w-0 rounded-xl border border-slate-200 overflow-hidden">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -365,6 +355,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
             fitViewOptions={{ padding: 0.2 }}
             nodesConnectable={false}
           >
+            <ViewportAdjuster panelOpen={!!selectedMetric} panelWidth={PANEL_WIDTH} />
             <Controls showInteractive={false} />
             <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#9ca3af" />
             <Panel position="top-left">
@@ -431,18 +422,18 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
           </ReactFlow>
         </div>
 
-        {/* Metric side panel — slides in, collapsible, resizable */}
+        {/* Metric side panel — slides in, collapsible */}
         <div
           className="shrink-0 overflow-hidden"
           style={{
-            width: !selectedMetric ? 0 : panelCollapsed ? 36 : panelWidth,
+            width: !selectedMetric ? 0 : panelCollapsed ? 36 : PANEL_WIDTH,
             marginLeft: selectedMetric ? 12 : 0,
-            transition: isDragging ? "none" : "width 300ms ease-in-out, margin-left 300ms ease-in-out",
+            transition: "width 300ms ease-in-out, margin-left 300ms ease-in-out",
           }}
         >
           {panelCollapsed ? (
             // Collapsed strip
-            <div className="w-9 h-full flex flex-col items-center pt-3 bg-white rounded-xl border border-gray-100">
+            <div className="w-9 h-full flex flex-col items-center pt-3 bg-white rounded-xl border border-slate-200">
               <button
                 onClick={() => setPanelCollapsed(false)}
                 className="p-1 rounded-lg text-gray-300 hover:text-gray-500 hover:bg-gray-50 transition-colors"
@@ -453,23 +444,14 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
             </div>
           ) : (
             <div className="h-full flex">
-              {/* Drag handle */}
-              <div
-                className="w-1.5 shrink-0 cursor-col-resize group"
-                onMouseDown={handleDragStart}
-              >
-                <div className="w-px h-full mx-auto bg-gray-100 group-hover:bg-blue-300 transition-colors" />
-              </div>
-
               {/* Panel content */}
-              <div className="flex-1 min-w-0 flex flex-col bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="flex-1 min-w-0 flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden">
                 {/* Header */}
                 <div className="shrink-0 px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 truncate">
+                    <p className="text-sm font-semibold text-gray-700 truncate">
                       {selectedMetric ? METRIC_CONFIG[selectedMetric].label : ""}
                     </p>
-                    <p className="text-xs text-gray-300 mt-0.5">todos os colaboradores</p>
                   </div>
                   <button
                     onClick={() => setPanelCollapsed(true)}
@@ -481,7 +463,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
                 </div>
 
                 {/* Scrollable list grouped by TL */}
-                <div className="flex-1 overflow-y-auto">
+                <div key={selectedMetric} className="flex-1 overflow-y-auto animate-page-enter">
                   {selectedMetric && teamLeaders.map(tl => {
                     const cfg = METRIC_CONFIG[selectedMetric];
                     const teamEmps = employees
@@ -513,13 +495,9 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
 
                           const delta = (val !== null && cfg.target !== undefined) ? Math.round(val - cfg.target) : null;
                           const deltaStr = delta === null ? null
-                            : delta === 0 ? cfg.format(0)
-                            : (delta > 0 ? "+" : "−") + cfg.format(Math.abs(delta));
-                          const deltaColor = delta === null ? "" : delta > 0
-                            ? "text-emerald-700"
-                            : delta < 0
-                            ? "text-red-600"
-                            : "text-gray-500";
+                            : delta === 0 ? "0pp"
+                            : (delta > 0 ? "+" : "−") + `${Math.abs(delta)}pp`;
+                          const deltaColor = "text-gray-500";
 
                           return (
                             <div key={emp.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition-colors">
@@ -538,7 +516,7 @@ export default function OrgFlow({ employees, teamLeaders, director }: OrgFlowPro
                                 )}
                                 {/* real — label outside, colored pill for value */}
                                 <span className="text-[9px] font-medium text-gray-400">real</span>
-                                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full tabular-nums ${badgeClass}`}>
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${badgeClass}`}>
                                   {val !== null ? cfg.format(val) : "—"}
                                 </span>
                                 {val !== null && (
