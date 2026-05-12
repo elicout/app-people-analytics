@@ -86,21 +86,21 @@ export function TLNode({ data }: { data: TLNodeData }) {
       >
         {hovered && <TLCard name={name} email={email} teamName={teamName} employeeCount={employeeCount} roleLabel={roleLabel} />}
         <div
-          className={`flex items-center gap-3 px-4 py-3 bg-blue-600 text-white rounded-xl w-64 transition-colors select-none ${collapsible ? "cursor-pointer hover:bg-blue-700" : "cursor-default"}`}
+          className={`flex items-center gap-3 px-4 py-3 bg-gray-200 rounded-xl w-64 transition-colors select-none ${collapsible ? "cursor-pointer hover:bg-gray-400" : "cursor-default"}`}
           onClick={() => collapsible && onToggleCollapse(teamId)}
         >
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-            <span className="text-xs font-semibold">{initials(name)}</span>
+          <div className="w-8 h-8 rounded-full bg-white/50 flex items-center justify-center shrink-0">
+            <span className="text-xs font-semibold text-gray-700">{initials(name)}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">{name}</p>
-            <p className="text-xs text-blue-200 truncate">{teamName}</p>
+            <p className="text-sm font-semibold text-gray-900 truncate">{name}</p>
+            <p className="text-xs text-gray-500 truncate">{teamName}</p>
           </div>
           {collapsible && (
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-xs text-blue-200">{employeeCount}</span>
+              <span className="text-xs text-gray-500">{employeeCount}</span>
               <ChevronDownIcon
-                className="w-4 h-4 text-blue-200 transition-transform duration-200"
+                className="w-4 h-4 text-gray-500 transition-transform duration-200"
                 style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
               />
             </div>

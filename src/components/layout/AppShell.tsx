@@ -110,7 +110,7 @@ export default function AppShell({
                 className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-gray-200 text-gray-900"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    : "text-gray-600 hover:bg-gray-200 hover:text-gray-900"
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -143,7 +143,7 @@ export default function AppShell({
                                 document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
                               }
                             }}
-                            className="flex items-center gap-3 rounded-lg py-2 pl-9 pr-3 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+                            className="flex items-center gap-3 rounded-lg py-2 pl-9 pr-3 text-sm font-medium text-slate-500 transition-colors hover:bg-gray-200 hover:text-slate-700"
                           >
                             {child.label}
                           </Link>
@@ -163,11 +163,11 @@ export default function AppShell({
   return (
     <div className="flex h-screen overflow-hidden bg-white">
       {/* ── Sidebar ── */}
-      <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col bg-gray-50">
+      <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col bg-gray-100">
         {/* User profile */}
         <div className="px-3 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-sm font-bold text-white">
+          <div className="px-1 flex items-center gap-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black text-xs font-bold text-white">
               {initials}
             </div>
             <div className="min-w-0">
@@ -224,7 +224,7 @@ export default function AppShell({
         {/* Main column */}
         <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
           {/* Header */}
-          <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur-sm">
+          <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-8">
             <div className="flex items-center gap-4">
               {isDetailPage && (
                 <Link
