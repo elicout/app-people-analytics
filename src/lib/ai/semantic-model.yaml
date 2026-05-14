@@ -5,6 +5,7 @@ description: >
 
 tables:
   employees:
+    topic: "Headcount e estrutura da equipe — distribuição por cargo, departamento, tempo de empresa e salário"
     description: >
       One row per active or on-leave employee. Use this table for headcount,
       role distribution, salary costs, tenure analysis, and org structure.
@@ -24,6 +25,7 @@ tables:
       status: One of 'active', 'on_leave', 'terminated'.
 
   performance:
+    topic: "Performance — pontuações mensais, ratings e metas concluídas por colaborador"
     description: >
       Monthly performance review records per employee. Use for performance
       trends, score distributions, goal completion rates, and ratings.
@@ -36,6 +38,7 @@ tables:
       rating: One of 'exceeds', 'meets', 'below'.
 
   attendance:
+    topic: "Assiduidade — taxa de presença, ausências e padrões de faltas"
     description: >
       Daily attendance records per employee. Use for attendance rates,
       absenteeism analysis, and leave patterns.
@@ -46,6 +49,7 @@ tables:
       hours_worked: Decimal hours worked that day (0 if absent).
 
   productivity:
+    topic: "Produtividade — tarefas concluídas, pendências e taxa de entrega no prazo"
     description: >
       Monthly productivity metrics per employee.
     columns:
@@ -57,6 +61,7 @@ tables:
       quality_score: Quality of output score 0-100.
 
   overtime:
+    topic: "Horas extras — volume acumulado por colaborador e custo total"
     description: >
       Monthly overtime records per employee.
     columns:
@@ -67,6 +72,7 @@ tables:
       overtime_cost_usd: Cost of overtime in USD (1.5x hourly rate).
 
   turnover:
+    topic: "Rotatividade — saídas, motivos e tendências da equipe"
     description: >
       Records of employees who have left. Filter with CONTAINS(manager_chain, '<user_email>').
     columns:
@@ -77,6 +83,7 @@ tables:
       manager_chain: Same chain as in employees — use for RLS.
 
   time_bank:
+    topic: "Banco de Horas (BH) — horas acumuladas e compensadas por colaborador"
     description: >
       Monthly Banco de Horas (BH) records per employee. Tracks overtime hours credited to the
       bank (hours_accrued) and compensatory time already taken (hours_compensated). Join with
@@ -107,7 +114,14 @@ metrics:
     sql: "COUNT(*) FROM turnover WHERE CONTAINS(manager_chain,'{user_email}')"
 
 few_shot_examples:
-  - question: "Who has the highest overtime hours this month?"
+  - question: "Quantas pessoas tenho na minha equipe?"
+    sql: >
+      SELECT COUNT(*) AS total
+      FROM employees
+      WHERE CONTAINS(manager_chain, '{user_email}') AND email != '{user_email}'
+        AND status != 'terminated';
+
+  - question: "Quem tem mais horas extras este mês?"
     sql: >
       SELECT e.name, o.overtime_hours
       FROM overtime o
@@ -117,14 +131,14 @@ few_shot_examples:
       ORDER BY o.overtime_hours DESC
       LIMIT 5;
 
-  - question: "What is the average performance score?"
+  - question: "Qual é a pontuação média de performance?"
     sql: >
       SELECT AVG(p.score) as avg_score
       FROM performance p
       JOIN employees e ON e.id = p.employee_id
       WHERE CONTAINS(e.manager_chain, '{user_email}') AND e.email != '{user_email}';
 
-  - question: "Which employees are below performance expectations?"
+  - question: "Quais colaboradores estão abaixo das expectativas de performance?"
     sql: >
       SELECT e.name, AVG(p.score) as avg_score
       FROM performance p
@@ -134,14 +148,14 @@ few_shot_examples:
       HAVING AVG(p.score) < 70
       ORDER BY avg_score ASC;
 
-  - question: "What is the total salary cost?"
+  - question: "Qual é o custo total de salários?"
     sql: >
       SELECT SUM(salary_usd) as total_cost
       FROM employees
       WHERE CONTAINS(manager_chain, '{user_email}') AND email != '{user_email}'
         AND status != 'terminated';
 
-  - question: "Show tenure distribution."
+  - question: "Mostre a distribuição de tempo de empresa."
     sql: >
       SELECT
         CASE
