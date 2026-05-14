@@ -181,7 +181,7 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Pergunte sobre a equipa..."
+              placeholder="Pergunte sobre a equipe..."
               disabled={loading}
               className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-0 focus:border-gray-200 disabled:opacity-50"
             />

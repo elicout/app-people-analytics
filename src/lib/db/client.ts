@@ -28,7 +28,16 @@ export async function query<T = Record<string, unknown>>(
     const stmt = await conn.prepare(sql);
     const result = await stmt.all(...params);
     await stmt.finalize();
-    return result as T[];
+    // DuckDB returns COUNT/SUM results as BigInt (HUGEINT). JSON.stringify throws on BigInt,
+    // breaking the AI tool. Convert to Number — safe at people-analytics scale (never > 2^53).
+    return result.map((row) =>
+      Object.fromEntries(
+        Object.entries(row as Record<string, unknown>).map(([k, v]) => [
+          k,
+          typeof v === "bigint" ? Number(v) : v,
+        ])
+      )
+    ) as T[];
   } finally {
     await conn.close();
   }
