@@ -22,7 +22,10 @@ tables:
       salary_usd: Monthly gross salary in USD.
       manager_id: ID of this employee's direct manager.
       manager_chain: "Comma-separated list of all manager emails up the hierarchy. Use CONTAINS(manager_chain, '<user_email>') to scope visibility."
-      status: One of 'active', 'on_leave', 'terminated'.
+      status: "One of 'active', 'on_leave', 'terminated', 'open' (vacant position)."
+      sex: "Biological sex of the employee: 'M' (male) or 'F' (female). NULL for open positions."
+      birth_year: "Year of birth as an integer (e.g. 1990). Use to compute age or age bands. NULL for open positions."
+      pcd: "Boolean — true if the employee is a Pessoa com Deficiência (person with a disability)."
 
   performance:
     topic: "Performance — pontuações mensais, ratings e metas concluídas por colaborador"
@@ -112,6 +115,11 @@ metrics:
   turnover_rate:
     description: Number of departures divided by headcount.
     sql: "COUNT(*) FROM turnover WHERE CONTAINS(manager_chain,'{user_email}')"
+
+app_routes:
+  - topic: "horas extras (HE), banco de horas (BH), jornada, overtime, compensação de horas"
+    label: "Ver Jornada da equipe"
+    path: "/employees?view=jornada"
 
 few_shot_examples:
   - question: "Quantas pessoas tenho na minha equipe?"

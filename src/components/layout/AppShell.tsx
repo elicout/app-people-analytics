@@ -15,6 +15,7 @@ import {
   ArrowRightOnRectangleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  UserIcon
 } from "@heroicons/react/24/solid";
 import AiPanel from "./AiPanel";
 
@@ -32,10 +33,11 @@ const NAV_ITEMS_PROFILE: NavItem[] = [
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Painel Geral", icon: Squares2X2Icon, isPage: true },
-  { href: "/dashboard#workforce", label: "Workforce Planning", icon: IdentificationIcon, isPage: false },
+  { href: "/dashboard#workforce", label: "Workforce Planning", icon: UserIcon, isPage: false },
   { href: "/dashboard#diversidade", label: "Diversidade", icon: GlobeAltIcon, isPage: false },
   { href: "/dashboard#performance", label: "Performance & Talentos", icon: ArrowTrendingUpIcon, isPage: false },
-  { href: "/dashboard#turnover", label: "Turnover", icon: UserMinusIcon, isPage: false }
+  { href: "/dashboard#turnover", label: "Turnover", icon: UserMinusIcon, isPage: false },
+  { href: "/workforce", label: "Workforce Planning", icon: UserIcon, isPage: true },
 ];
 
 function groupNavItems(items: NavItem[]) {

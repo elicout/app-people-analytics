@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronRightIcon, SparklesIcon } from "@heroicons/react/24/solid";
 import type { ChatMessage } from "@/types";
+import MarkdownMessage from "@/components/ui/MarkdownMessage";
 
 const STRIP_WIDTH = 36;
 const MIN_WIDTH = 350;
@@ -159,7 +160,11 @@ export default function AiPanel({ collapsed, onToggle, teamId }: AiPanelProps) {
                     ? "bg-gray-100 text-gray-800"
                     : "bg-white text-gray-800"
                 }`}>
-                  <pre className="whitespace-pre-wrap font-sans text-sm">{msg.content}</pre>
+                  {msg.role === "user" ? (
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  ) : (
+                    <MarkdownMessage content={msg.content} />
+                  )}
                 </div>
               </div>
             ))}

@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { getRepositories } from "@/lib/db";
 import { KpiSummary, KpiChartItem, SplitCardData, AlertLevel, TrendDirection } from "@/types";
 import { getAlertLevel, trendDir } from "@/lib/utils";
-import { TARGETS, GD_CONFIG, MOCK_RATIOS, KPI_RULES } from "@/lib/constants";
+import { TARGETS, GD_CONFIG, MOCK_RATIOS, KPI_RULES, CHART_PERIODS } from "@/lib/constants";
 import KpiGrid from "@/components/dashboard/KpiGrid";
 import CardGrid from "@/components/dashboard/CardGrid";
 import CardRow from "@/components/dashboard/CardRow";
@@ -74,6 +74,8 @@ export default async function DashboardPage() {
     bhSummary,
     roleRows,
     tenureSplit,
+    diversity,
+    openPositions,
     gdClusters,
     highPerf,
     tvCount,
@@ -88,6 +90,8 @@ export default async function DashboardPage() {
     timeBank.getSummary(ue),
     employees.getRoleDistribution(ue),
     employees.getTenureSplit(ue),
+    employees.getDiversitySummary(ue),
+    employees.getOpenPositionsCount(ue),
     performance.getGdClusters(ue),
     performance.getHighPerformersCount(ue),
     turnover.getCount(ue),
@@ -102,14 +106,34 @@ export default async function DashboardPage() {
   const tvRate     = hc > 0 ? (tvCount / hc) * 100 : 0;
   const leaderT    = Math.round(tenureSplit.leader_tenure ?? 24);
   const nonLeaderT = Math.round(tenureSplit.nonleader_tenure ?? 13);
-  const pcdCount   = Math.max(1, Math.round(hc * MOCK_RATIOS.PCD_PCT));
-  const maleCount  = Math.round(hc * MOCK_RATIOS.MALE_PCT);
   const gepCount   = Math.max(1, Math.round(hc * MOCK_RATIOS.GEP_PCT));
   const regretted  = Math.max(1, Math.round(tvCount * MOCK_RATIOS.REGRETTED_PCT));
-  const posOpen    = Math.max(2, Math.round(hc * MOCK_RATIOS.OPEN_POS_PCT));
-  const hireTrend  = monthlyHires.map((r) => r.count);
-  const lastHires  = hireTrend[hireTrend.length - 1] ?? 0;
-  const prevHires  = hireTrend[hireTrend.length - 2] ?? lastHires;
+
+  // Workforce chart — align cumulative HC and monthly hires to the fixed 12-month window
+  // normMonth: strips time portion so DuckDB DATE strings ("2023-07-01") → "2023-07"
+  function normMonth(m: string): string { return m.substring(0, 7); }
+  const hcByMonth    = new Map(monthlyHC.map((r) => [normMonth(r.month), r.count]));
+  const hiresByMonth = new Map(monthlyHires.map((r) => [normMonth(r.month), r.count]));
+  const tvByMonth    = new Map(monthlyTurnover.map((r) => [normMonth(r.month), r.count]));
+
+  // Forward-fill HC from the last known value before the chart window starts
+  let lastHcVal = 0;
+  for (const r of monthlyHC) {
+    if (normMonth(r.month) <= CHART_PERIODS[0]!) lastHcVal = r.count;
+    else break;
+  }
+  const hcChartData    = CHART_PERIODS.map((p) => {
+    if (hcByMonth.has(p)) lastHcVal = hcByMonth.get(p)!;
+    return { month: `${p}-01`, value: lastHcVal };
+  });
+  const hiresChartData = CHART_PERIODS.map((p) => ({ month: `${p}-01`, value: hiresByMonth.get(p) ?? 0 }));
+  const tvDesligData   = CHART_PERIODS.map((p) => ({ month: `${p}-01`, value: tvByMonth.get(p) ?? 0 }));
+  const tvRateData     = CHART_PERIODS.map((p) => ({
+    month: `${p}-01`,
+    value: hc > 0 ? parseFloat(((tvByMonth.get(p) ?? 0) / hc * 100).toFixed(1)) : 0,
+  }));
+
+  const lastHires = hiresByMonth.get(CHART_PERIODS[CHART_PERIODS.length - 1]!) ?? 0;
 
   // GD/GT cluster map
   const gdMap: Record<string, number> = {};
@@ -136,42 +160,28 @@ export default async function DashboardPage() {
 
   // ── KPI definitions ──────────────────────────────────────────────────────────
 
-  // ── mock historic series for workforce charts (last 12 months) ───────────────
-  const mockWorkforceMonths = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() - (11 - i));
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-  });
-  const mockHCValues    = [0.78, 0.80, 0.82, 0.84, 0.86, 0.88, 0.90, 0.91, 0.93, 0.95, 0.97, 1.0].map((f) => Math.round(f * hc));
-  const mockHiresValues = [3,    5,    4,    7,    6,    4,    5,    8,    3,    6,    4,    lastHires];
-
   const workforceChartKpis: KpiChartItem[] = [
     {
       id: "headcount",
       label: "Headcount",
       formattedValue: hc.toLocaleString("pt-BR"),
-      //alert: "green",
-      chart: { data: mockWorkforceMonths.map((month, i) => ({ month, value: mockHCValues[i]! })) },
+      chart: { data: hcChartData },
     },
     {
       id: "admissoes",
       label: "Admissões",
       formattedValue: String(lastHires),
-      //alert: "green",
-      chart: { data: mockWorkforceMonths.map((month, i) => ({ month, value: mockHiresValues[i]! })) },
+      chart: { data: hiresChartData },
     },
     {
       id: "posicoes",
       label: "Posições Abertas",
-      formattedValue: String(posOpen),
-      //alert: getAlertLevel(posOpen, 5, false),
+      formattedValue: String(openPositions),
     },
     {
       id: "custo",
       label: "Custo Total",
       formattedValue: `R$ ${(salary / 1_000).toFixed(0)}K`,
-      //alert: "green",
     },
   ];
 
@@ -190,11 +200,9 @@ export default async function DashboardPage() {
   };
 
   const diversidadeKpis: KpiSummary[] = [
-    { ...kpi("pcds", "PCDs", pcdCount, String(pcdCount), "", -1, "down", "green", true), sub: `${Math.round((pcdCount / hc) * 100)}%` },
-    { ...kpi("mulheres", "Mulheres", hc - maleCount, String(hc - maleCount), "", 0, "stable", "green", true), sub: `${Math.round(((hc - maleCount) / hc) * 100)}%` },
-    { ...kpi("homens", "Homens", maleCount, String(maleCount), "", 0, "stable", undefined, true), sub: `${Math.round((maleCount / hc) * 100)}%` },
-    // kpi("tenure-lideres", "Tempo de Casa — Líderes", leaderT, `${leaderT} meses`, "", 0, "stable", "green", true),
-    // kpi("tenure-outros", "Tempo de Casa — Outros", nonLeaderT, `${nonLeaderT} meses`, "", 0, "stable", undefined, true),
+    { ...kpi("pcds", "PCDs", diversity.pcd, String(diversity.pcd), "", 0, "stable", "green", true), sub: hc > 0 ? `${Math.round((diversity.pcd / hc) * 100)}%` : "0%" },
+    { ...kpi("mulheres", "Mulheres", diversity.female, String(diversity.female), "", 0, "stable", "green", true), sub: hc > 0 ? `${Math.round((diversity.female / hc) * 100)}%` : "0%" },
+    { ...kpi("homens", "Homens", diversity.male, String(diversity.male), "", 0, "stable", undefined, true), sub: hc > 0 ? `${Math.round((diversity.male / hc) * 100)}%` : "0%" },
     kpi("tenure-outros", "Tempo de Casa Médio", nonLeaderT, `${nonLeaderT} meses`, "", 0, "stable", undefined, true),
   ];
 
@@ -218,30 +226,23 @@ export default async function DashboardPage() {
     kpi("deslig-regretted", "Desligamentos Regretted", regretted, String(regretted), "", 0, "stable", regretted > 3 ? "red" : "yellow", false),
   ];
 
-  // ── mock historic series for turnover charts (last 12 months) ───────────────
-  const mockTurnoverMonths = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() - (11 - i));
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-  });
-  const mockTvRates      = [7.2, 8.1, 6.9, 9.3, 10.1, 8.7, 7.5, 11.2, 9.8, 8.4, 10.6, parseFloat(tvRate.toFixed(1))];
-  const mockDesligCounts = [3,   4,   3,   5,   5,    4,   3,   6,   5,   4,   5,   tvCount];
-  const mockRegRates     = [3.1, 3.8, 2.9, 4.2, 4.8,  3.9, 3.2, 5.1, 4.4, 3.7, 4.9, parseFloat(hc > 0 ? ((regretted / hc) * 100).toFixed(1) : "0")];
-  const mockRegCounts    = [1,   2,   1,   2,   2,    2,   1,   3,   2,   2,   2,   regretted];
+  // Regretted turnover is still ratio-derived (no "regretted" flag in DB yet)
+  // REFACTOR: add a regretted boolean to turnover table when data model allows it
+  const mockRegRates  = CHART_PERIODS.map((p) => parseFloat(((tvByMonth.get(p) ?? 0) / Math.max(hc, 1) * 0.5 * 100).toFixed(1)));
+  const mockRegCounts = CHART_PERIODS.map((p) => Math.round((tvByMonth.get(p) ?? 0) * MOCK_RATIOS.REGRETTED_PCT));
 
   const turnoverChartKpis: KpiChartItem[] = [
     {
       id: "turnover-rate",
       label: "Turnover",
       formattedValue: `${tvRate.toFixed(1)}%`,
-      chart: { data: mockTurnoverMonths.map((month, i) => ({ month, value: mockTvRates[i]! })), unit: "%" },
+      chart: { data: tvRateData, unit: "%" },
     },
     {
       id: "desligamentos",
       label: "Desligamentos",
       formattedValue: String(tvCount),
-      chart: { data: mockTurnoverMonths.map((month, i) => ({ month, value: mockDesligCounts[i]! })) },
+      chart: { data: tvDesligData },
     },
   ];
 
@@ -250,13 +251,13 @@ export default async function DashboardPage() {
       id: "regretted-rate",
       label: "Turnover Regretted",
       formattedValue: `${hc > 0 ? ((regretted / hc) * 100).toFixed(1) : 0}%`,
-      chart: { data: mockTurnoverMonths.map((month, i) => ({ month, value: mockRegRates[i]! })), unit: "%" },
+      chart: { data: CHART_PERIODS.map((p, i) => ({ month: `${p}-01`, value: mockRegRates[i]! })), unit: "%" },
     },
     {
       id: "deslig-regretted",
       label: "Desligamentos Regretted",
       formattedValue: String(regretted),
-      chart: { data: mockTurnoverMonths.map((month, i) => ({ month, value: mockRegCounts[i]! })) },
+      chart: { data: CHART_PERIODS.map((p, i) => ({ month: `${p}-01`, value: mockRegCounts[i]! })) },
     },
   ];
 

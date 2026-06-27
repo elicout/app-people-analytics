@@ -10,6 +10,7 @@ type View = "cadastral" | "jornada";
 interface Props {
   employees: EmployeeListRow[];
   timeBankRows: TimeBankEmployeeRow[];
+  initialView?: View;
 }
 
 function initials(name: string) {
@@ -48,8 +49,8 @@ function HoverCard({ emp, pos }: { emp: EmployeeListRow; pos: CardPos }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function EmployeesTable({ employees, timeBankRows }: Props) {
-  const [view, setView] = useState<View>("cadastral");
+export default function EmployeesTable({ employees, timeBankRows, initialView = "cadastral" }: Props) {
+  const [view, setView] = useState<View>(initialView);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [cardPos, setCardPos] = useState<CardPos>({ x: 0, y: 0 });
 

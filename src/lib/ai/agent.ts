@@ -11,6 +11,12 @@ import { RLS } from "@/lib/constants";
 
 export type MessageClass = "in_scope" | "out_of_scope" | "capability_question";
 
+interface AppRoute {
+  topic: string;
+  label: string;
+  path: string;
+}
+
 interface SemanticModel {
   description: string;
   tables: Record<string, {
@@ -19,6 +25,7 @@ interface SemanticModel {
     columns: Record<string, string>;
   }>;
   metrics: Record<string, { description: string; sql: string }>;
+  app_routes?: AppRoute[];
   few_shot_examples: Array<{ question: string; sql: string }>;
 }
 
@@ -35,7 +42,7 @@ function loadSemanticModel(): SemanticModel {
 function getTopics(model: SemanticModel): string[] {
   return Object.values(model.tables)
     .filter((t) => t.topic)
-    .map((t) => `• ${t.topic}`);
+    .map((t) => `- ${t.topic}`);
 }
 
 /** Formatted bullet list of covered topics, driven by the semantic model. */
@@ -65,6 +72,12 @@ function buildSystemPrompt(model: SemanticModel, userEmail: string, teamName: st
       .replace(/\{rls_turnover\}/g, rlsTurnover)
     }`)
     .join("\n\n");
+
+  const deepLinks = model.app_routes?.length
+    ? `\n\nDEEP LINKS — MANDATORY:\nAt the end of any response whose answer draws on one of the topics below, append the corresponding markdown link on its own line after the data. Do not mention the link in the middle of a sentence — place it last.\n${
+        model.app_routes.map((r) => `- Topic: ${r.topic} → append: [${r.label} →](${r.path})`).join("\n")
+      }`
+    : "";
 
   return `You are a People Analytics assistant for the team "${teamName}".
 Always respond in Brazilian Portuguese (português do Brasil).
@@ -108,7 +121,8 @@ INSTRUCTIONS:
 - When joining other tables to employees, apply the filter on the employees alias.
 - Present numbers clearly (e.g., format currency, round percentages).
 - If a query returns no data, say so clearly.
-- Do not speculate — base answers only on data returned by the tool.`;
+- Do not speculate — base answers only on data returned by the tool.
+- Format responses with markdown: use **bold** for key values, - for bullet lists, and | tables | for multi-column data. Never use • as a bullet — always use -.${deepLinks}`;
 }
 
 function validateScope(sql: string, userEmail: string): boolean {
