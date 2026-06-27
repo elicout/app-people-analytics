@@ -2,9 +2,16 @@ import { auth } from "@/lib/auth";
 import { getRepositories } from "@/lib/db";
 import EmployeesTable from "@/components/employees/EmployeesTable";
 
-export default async function EmployeesPage() {
+export default async function EmployeesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   const session = await auth();
   const ue = session!.user.email!;
+
+  const { view } = await searchParams;
+  const initialView = view === "jornada" ? "jornada" : "cadastral";
 
   const { employees, timeBank } = getRepositories();
   const [employeeList, timeBankRows] = await Promise.all([
@@ -35,7 +42,7 @@ export default async function EmployeesPage() {
         </button>
       </div>
 
-      <EmployeesTable employees={employeeList} timeBankRows={timeBankRows} />
+      <EmployeesTable employees={employeeList} timeBankRows={timeBankRows} initialView={initialView} />
     </div>
   );
 }

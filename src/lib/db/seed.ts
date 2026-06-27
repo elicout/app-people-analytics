@@ -26,7 +26,11 @@ export async function seedDatabase(db: Database): Promise<void> {
       salary_usd DECIMAL(10,2),
       manager_id VARCHAR,
       status VARCHAR,
-      manager_chain VARCHAR
+      manager_chain VARCHAR,
+      sex VARCHAR,
+      birth_year INTEGER,
+      pcd BOOLEAN,
+      opened_date DATE
     );
 
     CREATE TABLE IF NOT EXISTS performance (
@@ -91,10 +95,14 @@ export async function seedDatabase(db: Database): Promise<void> {
   }
 
   const empStmt = await conn.prepare(
-    "INSERT INTO employees VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO employees VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
   for (const e of EMPLOYEES) {
-    await empStmt.run(e.id, e.teamId, e.name, e.role, e.roleLevel, e.department, e.email, e.hireDate, e.tenureMonths, e.salaryUsd, e.managerId, e.status, e.managerChain);
+    await empStmt.run(
+      e.id, e.teamId, e.name, e.role, e.roleLevel, e.department, e.email,
+      e.hireDate, e.tenureMonths, e.salaryUsd, e.managerId, e.status, e.managerChain,
+      e.sex ?? null, e.birthYear ?? null, e.pcd ?? null, e.openedDate ?? null
+    );
   }
   await empStmt.finalize();
 

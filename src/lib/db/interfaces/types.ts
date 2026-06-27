@@ -4,6 +4,10 @@ export interface MonthCount          { month: string; count: number }
 export interface ClusterCount        { cluster: string; count: number }
 export interface RoleCount           { role: string; count: number }
 export interface TenureSplit         { leader_tenure: number; nonleader_tenure: number }
+export interface TenureBandCount     { band: string; sort_key: number; count: number }
+export interface AgeGroupCount       { age_group: string; sort_key: number; count: number }
+export interface TeamCount           { team_id: string; count: number }
+export interface DiversitySummary    { male: number; female: number; pcd: number }
 export interface EmployeeListRow {
   id: string; name: string; role: string; department: string; email: string;
   hire_date: string; tenure_months: number; salary_usd: number; status: string;
@@ -29,6 +33,18 @@ export interface IEmployeeRepository {
   getMonthlyHeadcountCumulative(userEmail: string): Promise<MonthCount[]>;
   getRoleDistribution(userEmail: string): Promise<RoleCount[]>;
   getTenureSplit(userEmail: string): Promise<TenureSplit>;
+  /** Sex breakdown and PCD count for active/on-leave employees in scope. */
+  getDiversitySummary(userEmail: string): Promise<DiversitySummary>;
+  /** Count of open (vacant) positions in scope. */
+  getOpenPositionsCount(userEmail: string): Promise<number>;
+  /** Cumulative open position count per month, ordered ascending, derived from opened_date. */
+  getMonthlyOpenPositions(userEmail: string): Promise<MonthCount[]>;
+  /** Headcount bucketed into tenure bands, ordered short → long tenure. */
+  getTenureDistribution(userEmail: string): Promise<TenureBandCount[]>;
+  /** Headcount bucketed into age groups derived from birth_year. */
+  getAgeDistribution(userEmail: string): Promise<AgeGroupCount[]>;
+  /** Headcount per team (excludes team-leadership). */
+  getTeamDistribution(userEmail: string): Promise<TeamCount[]>;
   /** Active employees ordered by name — for the employees directory page. */
   getList(userEmail: string): Promise<EmployeeListRow[]>;
   /** Active non-leadership employees ordered by role_level — for the org chart. */

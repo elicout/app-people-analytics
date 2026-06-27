@@ -74,6 +74,14 @@ export interface Employee {
   managerChain: string;
   avatarUrl?: string;
   status: "active" | "on_leave" | "terminated" | "open";
+  /** Biological sex — undefined for open positions. */
+  sex?: "M" | "F";
+  /** Year of birth — undefined for open positions. */
+  birthYear?: number;
+  /** Pessoa com Deficiência — undefined for open positions. */
+  pcd?: boolean;
+  /** Date the vacancy was posted — only set for open positions. */
+  openedDate?: string;
 }
 
 export interface EmployeeMetrics {

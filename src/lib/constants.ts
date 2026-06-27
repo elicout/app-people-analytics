@@ -44,12 +44,16 @@ export const RLS = {
   COLUMN: "manager_chain",
 } as const;
 
-/** Ratios used to derive mock KPIs from headcount.
- *  Move to mock repository when the data boundary is built (see CLAUDE.md § Data layer). */
+/** Fixed 12-month chart window matching the mock data period range.
+ *  Update when the data set is refreshed or the reference date changes. */
+export const CHART_PERIODS = [
+  "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12",
+  "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06",
+] as const satisfies string[];
+
+/** Ratios still derived from headcount — replace each one as the DB gains the underlying column.
+ *  GEP_PCT: no GEP score in DB yet. REGRETTED_PCT: no regretted flag in turnover table yet. */
 export const MOCK_RATIOS = {
-  PCD_PCT:       0.05,
-  MALE_PCT:      0.50,
   GEP_PCT:       0.07,
   REGRETTED_PCT: 0.50,
-  OPEN_POS_PCT:  0.04,
 } as const;
